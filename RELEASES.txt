@@ -1,0 +1,10 @@
+
+0.1.0 "NAPPY"  --> First implementation of eXAT with very simple concepts
+
+1.0.0 "NODe"   --> Added objects, behaviours, ACL, ACL semantics
+
+1.1.0 "FOX"    --> FIPA compliance, full ontology support, first OTP model
+
+1.2.0 "EYE"    --> FIPA compliance, full ontology support, OTP model,
+                   ERESYE integration
+

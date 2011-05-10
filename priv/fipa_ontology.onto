@@ -1,0 +1,104 @@
+%
+%
+%
+
+-ontology (fipa_ontology).
+
+class ('agent-identifier') ->
+  {name = [string, mandatory],
+   addresses = [sequence_of (string), mandatory]};
+
+class ('acl-message') ->
+  {sender = ['agent-identifier', mandatory],
+   receiver = [ set_of ('agent-identifier'), mandatory],
+   'reply-to' = [ string, optional],
+   content = [ string, mandatory ],
+   language = [ string, optional],
+   encoding = [ string, optional],
+   ontology = [ string, optional],
+   protocol = [ string, optional],
+   'conversation-id' = [ string, optional],
+   'reply-with' = [ string, optional],
+   'in-reply-to' = [ string, optional],
+   'reply-by' = [ string, optional]};
+
+
+class ('ACCEPT-PROPOSAL')  -> is_a ('acl-message');
+class ('AGREE')            -> is_a ('acl-message');
+class ('CANCEL')           -> is_a ('acl-message');
+class ('CFP')              -> is_a ('acl-message');
+class ('CONFIRM')          -> is_a ('acl-message');
+class ('DISCONFIRM')       -> is_a ('acl-message');
+class ('INFORM')           -> is_a ('acl-message');
+class ('INFORM-IF')        -> is_a ('acl-message');
+class ('INFORM-REF')       -> is_a ('acl-message');
+class ('NOT-UNDERSTOOD')   -> is_a ('acl-message');
+class ('PROPAGATE')        -> is_a ('acl-message');
+class ('PROPOSE')          -> is_a ('acl-message');
+class ('PROXY')            -> is_a ('acl-message');
+class ('QUERY-IF')         -> is_a ('acl-message');
+class ('QUERY-REF')        -> is_a ('acl-message');
+class ('REFUSE')           -> is_a ('acl-message');
+class ('REJECT-PROPOSAL')  -> is_a ('acl-message');
+class ('REQUEST')          -> is_a ('acl-message');
+class ('REQUEST-WHEN')     -> is_a ('acl-message');
+class ('REQUEST-WHENEVER') -> is_a ('acl-message');
+class ('SUBSCRIBE')        -> is_a ('acl-message');
+
+%%
+%%
+
+class (action) ->
+  {'0' = ['agent-identifier', mandatory],
+   '1' = ['action-specification', mandatory]};
+
+class ('action-specification') ->
+  { };
+
+class ('get-description') ->
+  is_a ('action-specification');
+
+%%
+%%
+
+class ('search') ->
+  is_a ('action-specification'),
+  { '0' = ['AMS-OR-DF-agent-description', mandatory],
+    '1' = ['search-constraints', mandatory]};
+
+class ('AMS-OR-DF-agent-description') ->
+  { };
+
+class ('ams-agent-description') ->
+  is_a ('AMS-OR-DF-agent-description'),
+  { name = ['agent-identifier', optional],
+    ownership = [string, optional],
+    state = [string, optional]};
+
+class ('search-constraints') ->
+  { 'max-depth' = [integer, optional],
+    'max-results' = [integer, optional],
+    'search-id' = [string, optional]};
+
+%%
+%%
+
+class (result) ->
+  {'0' = [action, mandatory],
+   '1' = [sequence_of ('result-specification'), mandatory]};
+
+class ('result-specification') ->
+  { };
+
+class ('ap-service') ->
+  {name = [string, mandatory],
+   type = [string, mandatory],
+   addresses = [sequence_of (string), mandatory]};
+
+class ('ap-description') ->
+  is_a ('result-specification'),
+  {name = [string, mandatory],
+   'ap-services' = [sequence_of('ap-service'), mandatory]}.
+
+%%
+%%

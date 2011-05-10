@@ -1,0 +1,159 @@
+2007-07-23  Corrado Santoro  <csanto@diit.unict.it>
+
+	*  Integration of ERESYE 1.2.4
+	*  Changed license to GPLv3
+
+2005-09-24  Corrado Santoro  <csanto@diit.unict.it>
+
+	*  Created version 1.2, with integration of ERESYE
+
+2005-03-13  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/agents/ams.erl: FIPA compliance. Added 'get-description'
+	and 'ams-agent-description'.
+
+	* src/exat/mtp.erl: Added gen_server behaviour to handle HTTP
+	requests (the HTTP client 'inets' module does not handle
+	concurrent HTTP requests, so a server collecting requests and
+	handling them in sequence is mandatory).
+
+	* src/simpleauction/auction.erl: Simple Auction application
+	modified to reflect new features on ontolgies and speech acts.
+
+2005-03-12  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/ontology/fipa_ontology.onto: More classes of the "FIPA Agent
+	Managment Ontology".
+
+	* src/ontology/ontology_service.erl: Added ontology service to
+	manage registered ontologies.
+
+	* src/exat/mtp.erl (decode_and_forward_acl): Automatic ontology
+	decoding.
+
+	* src/exat/sl.erl: Added codec for SL messages.
+
+2005-03-05  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/agents/ams.erl: Initial AMS support to make eXAT
+	FIPA-compilant.
+
+	* src/ontology/ontology.erl: Added ontology management and
+	encoding/decoding.
+
+	* src/exat/logger.erl: Added logging management.
+
+	* src/exat/exat.app: Added exat application.
+
+	* src/exat/mtp.erl: Added HTTP MTP.
+
+	* src/exat/envelope.erl: Added XML envelope management (FIPA
+	compliant).
+
+2004-10-31  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/exat/agent.erl: Added support for concurrent behaviour
+	execution.
+
+2004-10-18  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/object/object.erl: Now (finally!) I'm able to distinguish
+	the cases: a) a method is not defined or has an undefined clause;
+	b) a function called wihtin a method is not defined or has an
+	undefined clause.
+
+	* src/object/object.erl: New version of 'super'.
+
+	* src/object/object.erl: Fixed bug in executing a behaviour
+	without a bound agent. It now executes all events but 'acl'.
+
+	* src/exat/agent.erl: agent:kill --> agent:stop, implemented
+	agent:kill as a brute-force termination, agent:behave, implemented
+	agent:behave with behaviour pushing.
+
+	* src/object/object.erl: pending processes??? 'multisync' is
+	pending when an object is brutally deleted.
+
+2004-09-27  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/exat/agent.erl: Added new/2, behave/2 and join/1.
+	Added deleting of behaviour and semantics objects.
+
+2004-09-19  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/eres/eres.erl: Added "eval" for term evaluation (it
+	evaluates lambda functions present in the term).
+
+2004-09-11  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/object/object.erl: set '__terminating__' to false
+	in 'object:do/2' to invalidate a previous call to 'object:stop/1'.
+
+	* src/exat/agent.erl: added 'agent:get_mind/1' and
+	'agent:get_semantics/1'.
+
+2004-09-05  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/object/eventmanager.erl: use of 'agent:match_message'
+	instead of 'agent:get_message'.
+
+	* src/exat/agent.erl: added a more correct handling and matching
+	of incoming messages (added 'match_message/2').
+
+	* src/exat/semantics.erl: added base class to implement
+	user-defined ACL semantics.
+
+	* src/exat/agent.erl: added 'gen_server' behaviour. Added support
+	for ACL semantics.
+
+2004-07-25  Corrado Santoro  <csanto@diit.unict.it>
+
+	* OFF-TOPIC: today, my son Riccardo is one year and an half (18
+	months) old :-))))
+
+	* src/exat/acl.hrl: Added support for all the parameters of the
+	ACL message structure (according to FIPA-00061G).
+
+	* src/exat/acl.erl: refinepattern changed to support the new ACL
+	message pattern structure.
+	Added support for all the parameters of the ACL message structure
+	(according to FIPA-00061G).
+
+	* src/eres/eres.erl: changed matching function in order to support
+	facts as both tuples and lists
+
+2004-07-24  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/exat/acl.erl: Changed basic functions to send ACLs in order
+	to meet new ACL message structure
+
+	* src/object/eventmanager.erl: Added call to match_lib:match_all.
+
+	* src/exat/match_lib.erl: Added function match_all/2 to support
+	pattern matching of ACLs according to new ACL message format (that
+	now uses an Erlang record).
+
+	* src/Makefile.conf (BEAM): Added "-I ../exat" to support
+	inclusion of "acl.hrl".
+
+	* src/exat/acl.hrl: Added record representation of ACL messages.
+
+	* src/exat/acl.erl: fixed functions (according to new SL0 scanner)
+	sl0_getslot, sl0_getcontent, parse_message, sl0_getcontent.
+	Added erlang_to_sl0 function to transform an SL0 Erlang-encoded
+	sentence into a string SL0 sentence.
+	Added record representation of ACL messages.
+
+2004-07-23  Corrado Santoro  <csanto@diit.unict.it>
+
+	* src/exat/acl.erl: Fix return value of "aclparser:parse" in
+	function sl0_parse/1 in order to support new SL0 scanner
+
+	* src/exat/acl.yrl: ACL/SL0 scanner transformed in order to
+	support a full translation of SL0 sentences in an Erlang
+	representation.
+
+	* src/exat/aclscanner.erl: Fixed token/1 function. It didn't work
+	when the argument were a list (string).
+	
+
