@@ -1,3 +1,8 @@
+eXAT
+====
+
+This is an authorized fork of original eXAT created by Corrado Santoro and
+Francesca Gandemi.
 
 eXAT Release 1.3 "EYE"
 ======================
@@ -47,6 +52,7 @@ eXAT, an erlang eXperimental Agent Tool
 ERESYE, an ERlang Expert SYstem Engine
 Copyright (C) 2003-07 Corrado Santoro (csanto@diit.unict.it)
 Copyright (C) 2005-07 Francesca Gangemi (francesca@erlang-consulting.com)
+Copyright (C) 2011 Gleb Peregud (gleber.p@gmail.com)
 
 ['HTTP-MTP'] MTP Started at port 7779
 ['ONTOLOGY'] Started
