@@ -22,7 +22,6 @@
    { vsn, "1.2.0" },
    { applications, [kernel, stdlib] },
    { description, "erlang eXperimental Agent Tool" },
-   { registered, [] },
-   { modules, [] }
+   { registered, [] }
   ]}.
 
