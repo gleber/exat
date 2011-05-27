@@ -40,7 +40,7 @@
           action/2,
           request_proc/4]).
 
--export([start_link/1,
+-export([start_link/0,
          register_agent/1,
          de_register_agent/1,
          get_registered_agents/0]).
@@ -108,10 +108,10 @@ prepare_reply ([Content = #action {'1' = #'search'{
 
 
 %%====================================================================
-%% Func: start_link/1
+%% Func: start_link/0
 %% Returns: {ok, Pid}.
 %%====================================================================
-start_link (ApplicationList) ->
+start_link() ->
   logger:start ('AMS'),
   logger:log ('AMS',"Staring AMS."),
   ontology_service:register_codec ("FIPA-Agent-Management",
@@ -119,19 +119,6 @@ start_link (ApplicationList) ->
   agent:new (ams, [{behaviour, ams}]),
   [BehaviourObject] = agent:get_behaviour (ams),
   Pid = object:executorof (BehaviourObject),
-  if
-    ApplicationList =/= [] ->
-      logger:log ('AMS',
-                  {"Staring Applications: ~s",
-                  [lists:flatten (["{" ++ X ++ "}" ||
-                                    X <- ApplicationList])]}),
-      lists:foreach (fun (X) ->
-                         M = list_to_atom (X),
-                         M:start ()
-                     end, ApplicationList);
-    true -> ok
-  end,
-  %register (ams, Pid),
   {ok, Pid}.
 
 

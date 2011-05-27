@@ -1,13 +1,8 @@
-#
-# Makefile
-#
-
-
 all:
-	@(cd src;make)
+	./rebar compile
 
 clean:
-	@(cd src;make clean)
+	./rebar clean
 
 clearbak:
 	@$(FIND) . -type f -name \*~ -exec rm {} \;

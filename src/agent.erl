@@ -49,30 +49,30 @@
 -define (AGENT_DETACHED_BEHAVIOURS, '__AGENT_DETACHED_BEHAVIOURS').
 
 new (AgentName) ->
-  gen_server:start ({local, AgentName},
-                    agent,
-                    [AgentName, [],
-                     dict:store (?AGENT_DETACHED_BEHAVIOURS, [],
-                                 dict:new ()),
-                     []], []),
-  ok.
+    gen_server:start ({local, AgentName},
+                      agent,
+                      [AgentName, [],
+                       dict:store (?AGENT_DETACHED_BEHAVIOURS, [],
+                                   dict:new ()),
+                       []], []),
+    ok.
 
 new (AgentName, Parameters) ->
-  new (AgentName),
-  Rationality = prop (Parameters, rationality),
-  Behaviour = prop (Parameters, behaviour),
-  if
-    Rationality =/= nil ->
-      {Mind, Semantics} = Rationality,
-      agent:set_rational (AgentName, Mind, Semantics);
-    true -> nil
-  end,
-  if
-    Behaviour =/= nil ->
-      agent:set_behaviour (AgentName, Behaviour);
-    true -> nil
-  end,
-  ok.
+    new (AgentName),
+    Rationality = prop (Parameters, rationality),
+    Behaviour = prop (Parameters, behaviour),
+    if
+        Rationality =/= nil ->
+            {Mind, Semantics} = Rationality,
+            agent:set_rational (AgentName, Mind, Semantics);
+        true -> nil
+    end,
+    if
+        Behaviour =/= nil ->
+            agent:set_behaviour (AgentName, Behaviour);
+        true -> nil
+    end,
+    ok.
 
 
 prop ([], _) -> nil;

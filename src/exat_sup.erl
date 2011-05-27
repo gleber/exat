@@ -73,11 +73,6 @@ start_link () ->
 %%====================================================================
 
 init ([]) ->
-  case init:get_argument ('start') of
-    {ok, [[List]]} -> ApplicationList = string:tokens (List, ",");
-    _ -> ApplicationList = []
-  end,
-  %%io:format ("~p~n", [ApplicationList]),
   case init:get_argument ('http_port') of
     {ok, [[ThePort]]} -> Port = list_to_integer (ThePort);
     _ -> Port = ?DEFAULT_PORT
@@ -94,7 +89,7 @@ init ([]) ->
                 permanent, brutal_kill, worker, [ontology_service]},
 
   AMS = {exat_ams,
-         {ams, start_link, [ApplicationList]},
+         {ams, start_link, []},
          permanent, brutal_kill, worker, [ams]},
 
   ONTO = {ontology_service,

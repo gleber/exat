@@ -51,9 +51,26 @@
 %% Func: start/0
 %%====================================================================
 
-start () ->
-  application:start (inets, permanent),  % FIXME! Use ".rel"
-  application:start (exat, permanent).
+start() ->
+    application:start(inets, permanent),  % FIXME! Use ".rel"
+    application:start(exat, permanent),
+    case init:get_argument ('start') of
+        {ok, [[List]]} ->
+            ApplicationList = string:tokens(List, ","),
+            case ApplicationList of
+                [] -> ok;
+                _ ->
+                    logger:log ('AMS',
+                                {"Staring Applications: ~s",
+                                 [lists:flatten (["{" ++ X ++ "}" ||
+                                                     X <- ApplicationList])]}),
+                    lists:foreach (fun (X) ->
+                                           M = list_to_atom (X),
+                                           M:start ()
+                                   end, ApplicationList)
+            end;
+        _ -> ok
+    end.
 
 %%====================================================================
 %% Func: stop/1
