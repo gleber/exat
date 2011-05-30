@@ -34,23 +34,23 @@ eventof(eresye) -> eres_event;
 eventof(silent) -> silent_event.
 
 silent_event(Sync, Agent, Pattern, Proc) ->
-                                                %io:format("Silent\n"),
+    %%io:format("Silent\n"),
     object:call(Sync, signal, [{silent, Pattern, Proc}]).
 
 timeout_event(Sync, Agent, Timeout, Proc) ->
-                                                %io:format("Timeout ~w\n", [Timeout]),
+    %%io:format("Timeout ~w\n", [Timeout]),
     timer:sleep(Timeout),
     object:call(Sync, signal, [{timeout, Timeout, Proc}]).
 
 acl_event(Sync, Agent, Pattern, Proc) ->
-                                                %   Message = agent:get_message(Agent),
-                                                %   Match = match_lib:match_acl(Pattern, Message),
-                                                %   %%io:format("ACL Event: ~w\n", [Message]),
-                                                %   %%io:format("ACL Match: ~w\n", [Match]),
-                                                %   case Match of
-                                                %     false -> acl_event(Sync, Agent, Pattern, Proc);
-                                                %     true -> object:call(Sync, signal, [{acl, Message, Proc}])
-                                                %   end.
+    %%   Message = agent:get_message(Agent),
+    %%   Match = match_lib:match_acl(Pattern, Message),
+    %%   %%io:format("ACL Event: ~w\n", [Message]),
+    %%   %%io:format("ACL Match: ~w\n", [Match]),
+    %%   case Match of
+    %%     false -> acl_event(Sync, Agent, Pattern, Proc);
+    %%     true -> object:call(Sync, signal, [{acl, Message, Proc}])
+    %%   end.
     Message = agent:match_message(Agent, Pattern),
     object:call(Sync, signal, [{acl, Message, Proc}]).
 
@@ -60,5 +60,5 @@ eres_event(Sync, Agent, {Engine, read, Pattern}, Proc) ->
 
 eres_event(Sync, Agent, {Engine, get, Pattern}, Proc) ->
     Data = eresye:wait_and_retract(Engine, Pattern),
-                                                %io:format("eres got ~w\n", [Data]),
+    %%io:format("eres got ~w\n", [Data]),
     object:call(Sync, signal, [{eres, Data, Proc}]).
