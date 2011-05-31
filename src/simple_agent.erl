@@ -25,6 +25,8 @@
 -include("acl.hrl").
 -include("fipa_ontology.hrl").
 -export([new/2,
+         new/3,
+
          join/1,
          stop/1,
          kill/1,
@@ -33,165 +35,64 @@
          get_acl_semantics/1,
          set_property/3,
          get_property/2,
-         send_message/4,
-         get_message/1,
-         match_message/2,
+
+         %% send_message/4,
+         %% get_message/1,
+         %% match_message/2,
+
          init/1,
          handle_call/3,
          handle_cast/2,
+         handle_info/2,
+         code_change/3,
          terminate/2]).
 
--define(AGENT_BEHAVIOURS, '__AGENT_BEHAVIOURS').
--define(AGENT_DETACHED_BEHAVIOURS, '__AGENT_DETACHED_BEHAVIOURS').
+-record(state, {name,
+                callback,
+                int_state,
+                acl_queue,
+                dict,
+                process_queue}).
 
-new(AgentName) ->
-    new(AgentName, []).
+new(AgentName, Callback) ->
+    new(AgentName, Callback, []).
 
-new(AgentName, Parameters) ->
+new(AgentName, Callback, Parameters) ->
     {ok, _} = gen_server:start({local, AgentName},
                                simple_agent,
-                               [AgentName, Parameters], []),
+                               [AgentName, Callback, Parameters], []),
     ok.
 
 
 %%
 %% MAIN CALLS
 %%
+join(_Agent) ->
+    erlang:error(notimpl).
+
+set_property(_Agent, _Property, _Value) ->
+    erlang:error(notimpl).
+
+get_property(_Agent, _Property) ->
+    erlang:error(notimpl).
 
 
+set_rational(_Pid, _EngineName, _SemanticsClass) ->
+    erlang:error(notimpl).
 
-join(Agent) ->
-    BehaviourObject = get_property(Agent, ?AGENT_BEHAVIOURS),
-    join_list(BehaviourObject),
-    set_property(Agent, ?AGENT_BEHAVIOURS, nil),
-    ok.
+get_mind(_Pid) ->
+    erlang:error(notimpl).
 
-join_list(nil) -> ok;
-join_list([]) -> ok;
-join_list([{BehaviourObject, detached} | Tail]) -> join_list(Tail);
-join_list([BehaviourObject | Tail]) ->
-    object:join(BehaviourObject),
-    object:delete(BehaviourObject),
-    join_list(Tail).
-
-set_property(Agent, Property, Value) ->
-    gen_server:call(Agent, [set_property, Property, Value]).
-
-get_property(Agent, Property) ->
-    gen_server:call(Agent, [get_property, Property]).
-
-get_message(Agent) ->
-    gen_server:cast(Agent, [getmessage, self()]),
-    receive
-        X -> X
-    end.
-
-match_message(Agent, Pattern) ->
-    gen_server:cast(Agent, [match_message, Pattern, self()]),
-    receive
-        X -> X
-    end.
-
-send_message(nil, ReceiverAgent, Mode, Message) ->
-    gen_server:call(ReceiverAgent, [Mode, Message]), ok;
-
-send_message(SenderAgent, ReceiverAgent, Mode, Message) ->
-    SenderAgentName = extract_agent_identifier(SenderAgent),
-                                                %io:format("name = ~w\n", [SenderAgentName]),
-    R = agent:get_property(SenderAgentName, rationality),
-    CanSend =
-        if
-            R == nil -> true;
-            true ->
-                [Engine, Semantics] = R,
-                %%io:format("Semantics = ~w,~w,~w\n",
-                %%           [Engine, Semantics, SenderAgentName]),
-                object:call(Semantics, is_feasible,
-                            [SenderAgentName, Engine, Message])
-        end,
-                                                %io:format("Cansend = ~w\n", [CanSend]),
-    if
-        CanSend -> perform_message_sending(ReceiverAgent, [Mode, Message]), ok;
-%%% FIXME!!!! This is not for a distributed environment?????
-        true -> error
-    end.
-
-
-extract_agent_identifier(Pid)
-  when record(Pid, 'agent-identifier') ->
-    Pid#'agent-identifier'.name;
-extract_agent_identifier(Pid)
-  when record(Pid, object) ->
-    extract_agent_identifier(object:agentof(Pid));
-extract_agent_identifier(Pid) ->
-    Pid.
-
-
-
-perform_message_sending(ReceiverAgent, [Mode, Message])
-  when record(ReceiverAgent, 'agent-identifier') ->
-    mtp:http_mtp_encode_and_send(Message);
-perform_message_sending(ReceiverAgent, [Mode, Message]) ->
-    gen_server:call(ReceiverAgent, [Mode, Message]).
-
-
-
-set_rational(Pid, EngineName, SemanticsClass) ->
-    SemanticsObject = object:new(SemanticsClass),
-    %% io:format("Semantic Object = ~w\n", [SemanticsObject]),
-    Agent = extract_agent_identifier(Pid),
-    set_property(Agent, rationality, [EngineName, SemanticsObject]).
-
-get_mind(Pid) ->
-    Agent = extract_agent_identifier(Pid),
-    %%io:format("Agent = ~w\n", [Agent]),
-    [EngineName, SemanticsObject] = get_property(Agent, rationality),
-    EngineName.
-
-get_acl_semantics(Pid) ->
-    Agent = extract_agent_identifier(Pid),
-    Semantics = get_property(Agent, rationality),
-    if
-        Semantics == nil -> nil;
-        true ->
-            [EngineName, SemanticsObject] = get_property(Agent, rationality),
-            SemanticsObject
-    end.
+get_acl_semantics(_Pid) ->
+    erlang:error(notimpl).
 
 
 stop(Agent) ->
-    agent:join(Agent),
-    Semantics = get_acl_semantics(Agent),
-    if
-        Semantics =/= nil -> object:delete(Semantics);
-        true -> nil
-    end,
-    gen_server:cast(Agent, stop),
-    ok.
+    gen_server:call(Agent, '$simple_agent_stop').
 
 kill(Agent) ->
-    BehaviourObject = get_property(Agent, ?AGENT_BEHAVIOURS),
-    kill_list(BehaviourObject),
-    DetachedBehaviourObject = get_property(Agent, ?AGENT_DETACHED_BEHAVIOURS),
-    kill_list(DetachedBehaviourObject),
-    set_property(Agent, ?AGENT_BEHAVIOURS, nil),
-    Semantics = get_acl_semantics(Agent),
-    if
-        Semantics =/= nil ->
-            object:delete(Semantics);
-        true -> nil
-    end,
-    gen_server:cast(Agent, stop),
-    ok.
+    stop(Agent).
 
-kill_list(nil) -> ok;
-kill_list([]) -> ok;
-kill_list([{BehaviourObject, detached} | Tail]) ->
-    object:delete(BehaviourObject),
-    kill_list(Tail);
-kill_list([BehaviourObject | Tail]) ->
-    object:delete(BehaviourObject),
-    kill_list(Tail).
 
 %%
 %% CALLBACKS
@@ -200,115 +101,88 @@ kill_list([BehaviourObject | Tail]) ->
 %%
 %% Initialize
 %%
-init(State) ->
-    [ AgentName | _ ] = State,
+init(Args) ->
+    process_info(trap_exit, true),
+    [ AgentName, Callback, Parameters | _ ] = Args,
     ams:register_agent(AgentName),
-    {ok, State}.
+    {ok, IntState} = Callback:init(AgentName, Parameters),
+    {ok, #state{name = AgentName,
+                callback = Callback,
+                int_state = IntState}}.
 
 %%
 %% Terminate
 %%
-terminate(normal, State) ->
-    [ AgentName | _ ] = State,
+terminate(Reason, #state{callback = Callback, name = AgentName, int_state = IntState} = _State) ->
     ams:de_register_agent(AgentName),
+    ok = Callback:terminate(Reason, IntState),
     ok.
 
 %%
 %% Gets a property from agent
 %%
-handle_call([get_property, PropertyName], From,
-            [AgentName, AclQueue, AgentDict, ProcessQueue]) ->
-    Value = a__get_prop(AgentDict, PropertyName),
-    {reply, Value, [AgentName, AclQueue, AgentDict, ProcessQueue]};
-
+handle_call({get_property, _PropertyName}, _From, #state{} = State) ->
+    {reply, {error, notimpl}, State};
 
 %%
 %% Sets a property
 %%
-handle_call([set_property, PropertyName, PropertyValue], From,
-            [AgentName, AclQueue, AgentDict, ProcessQueue]) ->
-    A1 = a__set_prop(AgentDict, PropertyName, PropertyValue),
-    {reply, ok, [AgentName, AclQueue, A1, ProcessQueue]};
+handle_call({set_property, _PropertyName, _PropertyValue}, _From, #state{} = State) ->
+    {reply, {error, notimpl}, State};
 
 
 
 %%
 %% Receives an ACL message in String format
 %%
-handle_call([acl, Acl], From,
-            [AgentName, AclQueue, AgentDict, ProcessQueue]) ->
+handle_call([acl, AclStr], _From, #state{int_state = IntState, callback = Callback} = State) ->
     %%io:format("[Agent] Received ACL=~s\n", [Acl]),
-    case catch(acl:parse_message(Acl)) of
-        {'EXIT', Reason} ->
-            %%io:format("[Agent] Error in ACL parsing\n"),
-            R = [AgentName, AclQueue, AgentDict, ProcessQueue];
-        ParsedMessage ->
-            %%io:format("[Agent] ACL parsed OK\n"),
-            {AclQueue1, ProcessQueue1} =
-                perform_re(AgentName, AgentDict,
-                           ParsedMessage, AclQueue, ProcessQueue),
-            R = [AgentName, AclQueue1, AgentDict, ProcessQueue1]
-    end,
-    {reply, ok, R};
+    case catch(acl:parse_message(AclStr)) of
+        {'EXIT', _Reason} ->
+            {reply, ok, State};
+        Acl ->
+            {noreply, IntState2} = Callback:handle_acl(Acl, IntState),
+            {reply, ok, State#state{int_state = IntState2}}
+    end;
 
 %%
 %% Receives an ACL message in Erlang format
 %%
-handle_call([acl_erl_native, Acl], From,
-            [AgentName, AclQueue, AgentDict, ProcessQueue]) ->
-    %%io:format("[Agent] Received ACL=~w\n", [Acl]),
-    {AclQueue1, ProcessQueue1} =
-        perform_re(AgentName, AgentDict,
-                   Acl, AclQueue, ProcessQueue),
-    {reply, ok, [AgentName, AclQueue1, AgentDict, ProcessQueue1]}.
+handle_call([acl_erl_native, Acl], _From, #state{int_state = IntState, callback = Callback} = State) ->
+    {noreply, IntState2} = Callback:handle_acl(Acl, IntState),
+    {reply, ok, State#state{int_state = IntState2}};
 
-
-%%
-%% Retrieves a message from the queue(or waits for the message)
-%%
-handle_cast([getmessage, From],
-            [AgentName, AclQueue, AgentDict, ProcessQueue]) ->
-    if
-        length(AclQueue) > 0 ->
-            ProcessQueue1  = ProcessQueue,
-            [Message | AclQueue1] = AclQueue,
-            catch(From ! Message);
-        true ->
-            ProcessQueue1 = ProcessQueue ++ [{nil, From}],
-            AclQueue1 = AclQueue
-    end,
-    {noreply, [AgentName, AclQueue1, AgentDict, ProcessQueue1]};
-
-%%
-%% Retrieves a matching message from the queue
-%% (or waits for a matching message)
-%%
-handle_cast([match_message, Pattern, From],
-            [AgentName, AclQueue, AgentDict, ProcessQueue]) ->
-    {Sent, NewAclQueue} = find_matching_message(AclQueue, Pattern, From, []),
-    if
-        Sent ->
-            AclQueue1 = NewAclQueue,
-            ProcessQueue1 = ProcessQueue;
-        true ->
-            ProcessQueue1 = ProcessQueue ++ [{Pattern, From}],
-            AclQueue1 = AclQueue
-    end,
-                                                %   if
-                                                %     length(AclQueue) > 0 ->
-                                                %       ProcessQueue1  = ProcessQueue,
-                                                %       [Message | AclQueue1] = AclQueue,
-                                                %       catch(From ! Message);
-                                                %     true ->
-                                                %       ProcessQueue1 = ProcessQueue ++ [{Pattern, From}],
-                                                %       AclQueue1 = AclQueue
-                                                %   end,
-    {noreply, [AgentName, AclQueue1, AgentDict, ProcessQueue1]};
-
+handle_call(Call, From, #state{int_state = IntState, callback = Callback} = State) ->
+    R = Callback:handle_call(Call, From, IntState),
+    IntState2 = element(size(R), R),
+    setelement(size(R), R, State#state{int_state = IntState2}).
 
 %%
 %% Stops the agent process
 %%
-handle_cast(stop, State) ->
-    {stop, normal, State}.
 
+handle_cast('$simple_agent_stop', State) ->
+    {stop, normal, State};
+
+handle_cast(Cast, #state{int_state = IntState, callback = Callback} = State) ->
+    R = Callback:handle_cast(Cast, IntState),
+    IntState2 = element(size(R), R),
+    setelement(size(R), R, State#state{int_state = IntState2}).
+
+
+handle_info(Msg, #state{int_state = IntState, callback = Callback} = State) ->
+    R = Callback:handle_info(Msg, IntState),
+    IntState2 = element(size(R), R),
+    setelement(size(R), R, State#state{int_state = IntState2}).
+
+code_change(OldVsn, #state{int_state = IntState, callback = Callback} = State, Extra) ->
+    {ok, IntState2} = Callback:code_change(OldVsn, IntState, Extra),
+    {ok, State#state{int_state = IntState2}}.
+
+
+%% extract_agent_identifier(AgentOrObject) when record(AgentOrObject, 'agent-identifier') ->
+%%     AgentOrObject#'agent-identifier'.name;
+%% extract_agent_identifier(AgentOrObject) when record(AgentOrObject, object) ->
+%%     extract_agent_identifier(object:agentof(AgentOrObject));
+%% extract_agent_identifier(AgentOrObject) ->
+%%     AgentOrObject.
