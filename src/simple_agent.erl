@@ -47,6 +47,13 @@
          code_change/3,
          terminate/2]).
 
+-spec behaviour_info(atom()) -> 'undefined' | [{atom(), arity()}].
+behaviour_info(callbacks) ->
+    [{init,1},{handle_call,3},{handle_cast,2},{handle_info,2},
+     {terminate,2},{code_change,3}];
+behaviour_info(_Other) ->
+    undefined.
+
 -record(state, {name,
                 callback,
                 int_state,
@@ -102,7 +109,7 @@ kill(Agent) ->
 %% Initialize
 %%
 init(Args) ->
-    process_info(trap_exit, true),
+    process_flag(trap_exit, true),
     [ AgentName, Callback, Parameters | _ ] = Args,
     ams:register_agent(AgentName),
     {ok, IntState} = Callback:init(AgentName, Parameters),
