@@ -74,8 +74,6 @@ http (Port) ->
                   integer_to_list (Port), "/acc" ]),
   eresye:assert (agent_registry, {mtp_address, MTPAddress}),
 
-  %%gen_server:start_link ({local, mtp_sender}, mtp, [], []),
-
   http_server:start (Port, {mtp, http_mtp_post}, []).
 
 %%====================================================================
@@ -89,13 +87,13 @@ addresses () ->
 %% Func: http_mtp_post/3
 %%====================================================================
 http_mtp_post (Socket, ['POST', Url, Headers, Content], Params) ->
-  %%io:format ("URL = ~s~n", [Url]),
-  %%display_params (Headers),
-  ContentLines = http_server:split_lines (Content),
-  ContentType = http_server:get_key (Headers, "Content-Type"),
-  {ok, [Encoding, Media, EncodingParams]} =
-    http_server:media_type_decode (ContentType),
-  http_mtp_decode (Encoding, Media, EncodingParams, ContentLines);
+    %%io:format ("URL = ~s~n", [Url]),
+    %%display_params (Headers),
+    ContentLines = http_server:split_lines (Content),
+    ContentType = http_server:get_key (Headers, "Content-Type"),
+    {ok, [Encoding, Media, EncodingParams]} =
+        http_server:media_type_decode (ContentType),
+    http_mtp_decode (Encoding, Media, EncodingParams, ContentLines);
 
 http_mtp_post (_, [_, _, _, _], _) -> ?BAD_RESPONSE.
 
@@ -107,99 +105,82 @@ http_mtp_post (_, [_, _, _, _], _) -> ?BAD_RESPONSE.
 %% Func: http_mtp_decode/3
 %%====================================================================
 http_mtp_decode ("multipart", _, EncodingParams, ContentLines) ->
-  Boundary = http_server:get_key (EncodingParams, "boundary"),
-  %%io:format ("Boundary ~s~n", [Boundary]),
-  SplittedLines = http_server:multi_part_split (ContentLines,
-                                                "--" ++ Boundary),
-  %%io:format ("----~nLines ~s~n----~n", [lists:flatten(ContentLines)]),
-  [_, Envelope0, ACLMessage0 | _] = SplittedLines,
-  {To, From, ACLRepr} =
-    envelope:parse_xml_envelope (lists:flatten (
-                                   skip_to_empty_line (Envelope0))),
-  ACLMessage = replace_newlines ([], lists:flatten (
-                                       skip_to_empty_line (ACLMessage0))),
-  %%io:format ("To  = ~w~n", [To]),
-  %%io:format ("ACL len = ~w~n", [length (ACLMessage)]),
-  decode_and_forward_acl (To, From, ACLMessage, ACLRepr);
+    Boundary = http_server:get_key (EncodingParams, "boundary"),
+    %%io:format ("Boundary ~s~n", [Boundary]),
+    SplittedLines = http_server:multi_part_split (ContentLines,
+                                                  "--" ++ Boundary),
+    %%io:format ("----~nLines ~s~n----~n", [lists:flatten(ContentLines)]),
+    [_, Envelope0, ACLMessage0 | _] = SplittedLines,
+    {To, From, ACLRepr} =
+        envelope:parse_xml_envelope (lists:flatten (
+                                       mtp_utils:skip_to_empty_line (Envelope0))),
+    ACLMessage = mtp_utils:replace_newlines ([], lists:flatten (
+                                                   mtp_utils:skip_to_empty_line (ACLMessage0))),
+    %%io:format ("To  = ~w~n", [To]),
+    %%io:format ("ACL len = ~w~n", [length (ACLMessage)]),
+    decode_and_forward_acl (To, From, ACLMessage, ACLRepr);
 
 http_mtp_decode (_, _, _, _) -> ?BAD_RESPONSE.
 
 %%
 %%
 decode_and_forward_acl (_, _, Message, "fipa.acl.rep.string.std") ->
-  DecodedMessage = sl:decode (Message),
-  %%io:format ("MSG = ~p~n", [DecodedMessage]),
-  ACLMessage = list_to_tuple ([ aclmessage |
-                                tuple_to_list (DecodedMessage)]),
-  %%io:format ("Message = ~w~n", [ACLMessage]),
-  %%io:format ("R = ~w~n", [ACLMessage#aclmessage.receiver]),
+    DecodedMessage = sl:decode (Message),
+    %%io:format ("MSG = ~p~n", [DecodedMessage]),
+    ACLMessage = list_to_tuple ([ aclmessage |
+                                  tuple_to_list (DecodedMessage)]),
+    %%io:format ("Message = ~w~n", [ACLMessage]),
+    %%io:format ("R = ~w~n", [ACLMessage#aclmessage.receiver]),
 
-  %% decode content
-  ParsedMessage =
-    case ontology_service:get_codec (ACLMessage#aclmessage.ontology) of
-      {ok, Codec} ->
-        {ok, SL} = sl:decode (ACLMessage#aclmessage.content,
-                              ascii_sl, erlang_sl),
-        %%io:format ("Content = ~p~n", [SL]),
-        ACLMessage#aclmessage { content = Codec:decode (SL) };
-      _ -> ACLMessage
-    end,
+    %% decode content
+    ParsedMessage =
+        case ontology_service:get_codec (ACLMessage#aclmessage.ontology) of
+            {ok, Codec} ->
+                {ok, SL} = sl:decode (ACLMessage#aclmessage.content,
+                                      ascii_sl, erlang_sl),
+                %%io:format ("Content = ~p~n", [SL]),
+                ACLMessage#aclmessage { content = Codec:decode (SL) };
+            _ -> ACLMessage
+        end,
 
 
-  %% determine receiver list
-  Receivers =
-    case is_list (ParsedMessage#aclmessage.receiver) of
-      true ->
-        ParsedMessage#aclmessage.receiver;
-      false ->
-        [ParsedMessage#aclmessage.receiver]
-    end,
-  CurrentPlatform = exat:current_platform(),
-  %%io:format ("Receivers = ~w~n", [Receivers]),
-  LocalReceivers = lists:filter (
-                     fun (X) ->
-                         {ID, HAP} =
-                           exat:split_agent_identifier (
-                             X#'agent-identifier'.name),
-                         HAP == CurrentPlatform
-                     end, Receivers),
-  MessagesToSend = [ParsedMessage#aclmessage { receiver = X } ||
-                     X <- lists:map (
-                            fun (X) ->
-                                {ID, _} =
-                                  exat:split_agent_identifier (
-                                    X#'agent-identifier'.name),
-                                X#'agent-identifier' { name = ID }
-                            end, LocalReceivers)],
-  %%io:format ("Parsed Message = ~w~n", [MessagesToSend]),
-  lists:foreach (
-    fun (X) ->
-        Receiver = (X#aclmessage.receiver)#'agent-identifier'.name,
-        {ID, _} = exat:split_agent_identifier (Receiver),
-        %%io:format ("Recv = ~w~n", [Receiver]),
-        gen_server:call (list_to_atom (ID), [acl_erl_native, X])
-    end, MessagesToSend),
-  ?OK_RESPONSE;
+    %% determine receiver list
+    Receivers =
+        case is_list (ParsedMessage#aclmessage.receiver) of
+            true ->
+                ParsedMessage#aclmessage.receiver;
+            false ->
+                [ParsedMessage#aclmessage.receiver]
+        end,
+    CurrentPlatform = exat:current_platform(),
+    %%io:format ("Receivers = ~w~n", [Receivers]),
+    LocalReceivers = lists:filter (
+                       fun (X) ->
+                               {ID, HAP} =
+                                   exat:split_agent_identifier (
+                                     X#'agent-identifier'.name),
+                               HAP == CurrentPlatform
+                       end, Receivers),
+    MessagesToSend = [ParsedMessage#aclmessage { receiver = X } ||
+                         X <- lists:map (
+                                fun (X) ->
+                                        {ID, _} =
+                                            exat:split_agent_identifier (
+                                              X#'agent-identifier'.name),
+                                        X#'agent-identifier' { name = ID }
+                                end, LocalReceivers)],
+    %%io:format ("Parsed Message = ~w~n", [MessagesToSend]),
+    lists:foreach (
+      fun (X) ->
+              Receiver = (X#aclmessage.receiver)#'agent-identifier'.name,
+              {ID, _} = exat:split_agent_identifier (Receiver),
+              %%io:format ("Recv = ~w~n", [Receiver]),
+              gen_server:call(list_to_atom (ID), [acl_erl_native, X])
+      end, MessagesToSend),
+    ?OK_RESPONSE;
 
 decode_and_forward_acl (_, _, _, _) -> ?BAD_RESPONSE.
 
-%%
-%%
-
-skip_to_empty_line ([]) -> [];
-skip_to_empty_line ([[] | T]) -> T;
-skip_to_empty_line ([_ | T]) -> skip_to_empty_line (T).
-
-%%
-%%
-
-replace_newlines (Acc, []) -> lists:reverse (Acc);
-replace_newlines (Acc, [$\r | T]) -> replace_newlines ([$ | Acc], T);
-replace_newlines (Acc, [$\n | T]) -> replace_newlines ([$ | Acc], T);
-replace_newlines (Acc, [H | T]) -> replace_newlines ([H | Acc], T).
-
-%%
-%%
 
 display_params ([]) -> ok;
 display_params ([{Param, Value} | T]) ->
@@ -261,7 +242,6 @@ http_mtp_encode_and_send (To, From, Message) ->
 %%                HTTPBody}, [], [{sync, true}]),
 
     HTTPID = gen_server:call (mtp_sender, {http_post, Request}),
-    io:format ("http_post result ~p, ~p~n", [self (), HTTPID]),
 
     {ok, RequestID} = HTTPID,
     Result = RequestID,

@@ -75,20 +75,22 @@ init (_) ->
 %% Description: handles the requests
 %%====================================================================
 handle_call ({register, OntologyName, Codec} ,_, Dict) ->
-  logger:log ('ONTOLOGY', {"Registering Codec ~s for ontology ~s",
-                           [Codec, OntologyName]}),
-  {reply, ok, dict:store (OntologyName, Codec, Dict)};
+    logger:log ('ONTOLOGY', {"Registering Codec ~s for ontology ~s",
+                             [Codec, OntologyName]}),
+    {reply, ok, dict:store (OntologyName, Codec, Dict)};
 
 handle_call ({get_codec, OntologyName} ,_, Dict) ->
-  Result = dict:find (OntologyName, Dict),
-  case Result of
-    error ->
-      logger:log ('ONTOLOGY', {"Codec not found for ontology ~s",
-                               [OntologyName]}),
-      ok;
-    _ -> ok
-  end,
-  {reply, Result, Dict}.
+    Result = dict:find (OntologyName, Dict),
+    case {Result, OntologyName} of
+        {error, '_'} ->
+            ok;
+        {error, _} ->
+            logger:log ('ONTOLOGY', {"Codec not found for ontology ~s",
+                                     [OntologyName]}),
+            ok;
+        _ -> ok
+    end,
+    {reply, Result, Dict}.
 
 
 %%====================================================================

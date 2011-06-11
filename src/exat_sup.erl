@@ -73,30 +73,30 @@ start_link () ->
 %%====================================================================
 
 init ([]) ->
-  case init:get_argument ('http_port') of
-    {ok, [[ThePort]]} -> Port = list_to_integer (ThePort);
-    _ -> Port = ?DEFAULT_PORT
-  end,
-  eresye:start (agent_registry),
+    case init:get_argument ('http_port') of
+        {ok, [[ThePort]]} -> Port = list_to_integer (ThePort);
+        _ -> Port = ?DEFAULT_PORT
+    end,
+    eresye:start (agent_registry),
 
-  MTP = {exat_platform,
-         {exat_server, start_link, [Port]},
-         permanent, brutal_kill, worker, [exat_server]},
+    MTP = {exat_platform,
+           {exat_server, start_link, [Port]},
+           permanent, brutal_kill, worker, [exat_server]},
 
-  MTP_SENDER = {mtp_sender_service,
-                {gen_server, start_link,
-                 [{local, mtp_sender}, mtp, [], []]},
-                permanent, brutal_kill, worker, [ontology_service]},
+    MTP_SENDER = {mtp_sender_service,
+                  {gen_server, start_link,
+                   [{local, mtp_sender}, mtp, [], []]},
+                  permanent, brutal_kill, worker, [ontology_service]},
 
-  AMS = {exat_ams,
-         {ams, start_link, []},
-         permanent, brutal_kill, worker, [ams]},
+    AMS = {exat_ams,
+           {ams, start_link, []},
+           permanent, brutal_kill, worker, [ams]},
 
-  ONTO = {ontology_service,
-          {gen_server, start_link,
-           [{local, ontology_service}, ontology_service, [], []]},
-         permanent, brutal_kill, worker, [ontology_service]},
+    ONTO = {ontology_service,
+            {gen_server, start_link,
+             [{local, ontology_service}, ontology_service, [], []]},
+            permanent, brutal_kill, worker, [ontology_service]},
 
-  ExatChildSpec = [MTP, MTP_SENDER, ONTO, AMS],
-  {ok, { {one_for_all, 5, 20}, ExatChildSpec} }.
+    ExatChildSpec = [MTP, MTP_SENDER, ONTO, AMS],
+    {ok, { {one_for_all, 5, 20}, ExatChildSpec} }.
 

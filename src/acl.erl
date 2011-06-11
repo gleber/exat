@@ -223,34 +223,34 @@ encode_agent_identifier (Default) -> Default.
 
 
 sendacl (Message) ->
-  Sender = encode_agent_identifier (Message#aclmessage.sender),
-  R = encode_agent_identifier (Message#aclmessage.receiver),
-  Receivers =
-    if
-      is_list (R) -> R;
-      true -> [R]
-    end,
+    Sender = encode_agent_identifier (Message#aclmessage.sender),
+    R = encode_agent_identifier (Message#aclmessage.receiver),
+    Receivers =
+        if
+            is_list (R) -> R;
+            true -> [R]
+        end,
 
-  %%io:format ("Sender ~w~n", [Sender]),
-  %%io:format ("Receivers ~w~n", [Receivers]),
+    %%io:format ("Sender ~w~n", [Sender]),
+    %%io:format ("Receivers ~w~n", [Receivers]),
 
-  %% encode content
-  EncodedContent = "\"" ++
-    case ontology_service:get_codec (Message#aclmessage.ontology) of
-      {ok, Codec} ->
-        SL = Codec:encode (Message#aclmessage.content),
-        sl:encode (SL);
-      _ -> Message#aclmessage.content
-    end ++ "\"",
+    %% encode content
+    EncodedContent = "\"" ++
+        case ontology_service:get_codec (Message#aclmessage.ontology) of
+            {ok, Codec} ->
+                SL = Codec:encode (Message#aclmessage.content),
+                sl:encode (SL);
+            _ -> Message#aclmessage.content
+        end ++ "\"",
 
-  [_ | Temp] = tuple_to_list (Message#aclmessage {
-                                sender = Sender,
-                                receiver = Receivers,
-                                content = EncodedContent }),
-  TransformedMessage = list_to_tuple (Temp),
-  [mtp:http_mtp_encode_and_send (X, Sender, TransformedMessage)
-   || X <- Receivers],
-  ok.
+    [_ | Temp] = tuple_to_list (Message#aclmessage {
+                                  sender = Sender,
+                                  receiver = Receivers,
+                                  content = EncodedContent }),
+    TransformedMessage = list_to_tuple (Temp),
+    [mtp:http_mtp_encode_and_send (X, Sender, TransformedMessage)
+     || X <- Receivers],
+    ok.
 
 
 inform (Message) ->
