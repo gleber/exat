@@ -95,7 +95,7 @@ get_acl_semantics(_Pid) ->
 
 
 stop(Agent) ->
-    gen_server:call(Agent, '$simple_agent_stop').
+    gen_server:cast(Agent, '$simple_agent_stop').
 
 kill(Agent) ->
     stop(Agent).

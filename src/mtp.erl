@@ -156,19 +156,12 @@ decode_and_forward_acl (_, _, Message, "fipa.acl.rep.string.std") ->
     %%io:format ("Receivers = ~w~n", [Receivers]),
     LocalReceivers = lists:filter (
                        fun (X) ->
-                               {ID, HAP} =
+                               {_ID, HAP} =
                                    exat:split_agent_identifier (
                                      X#'agent-identifier'.name),
                                HAP == CurrentPlatform
                        end, Receivers),
-    MessagesToSend = [ParsedMessage#aclmessage { receiver = X } ||
-                         X <- lists:map (
-                                fun (X) ->
-                                        {ID, _} =
-                                            exat:split_agent_identifier (
-                                              X#'agent-identifier'.name),
-                                        X#'agent-identifier' { name = ID }
-                                end, LocalReceivers)],
+    MessagesToSend = [ParsedMessage#aclmessage { receiver = X } || X <- LocalReceivers],
     %%io:format ("Parsed Message = ~w~n", [MessagesToSend]),
     lists:foreach (
       fun (X) ->

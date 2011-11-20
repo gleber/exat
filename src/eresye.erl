@@ -421,7 +421,7 @@ prepare_match_alpha_fun (Cond) ->
 
 
 get_conds ({Module, Func}, Ontology, ClauseID) ->
-  File = lists:concat ([Module, '.erl']),
+  File = lists:concat (["src/", Module, '.erl']),
   case epp:parse_file (File, ["."], []) of
     {error, OpenError} ->
       io:format(">> Errore!!!~n~w:~w~n", [{Module, Func}, OpenError]),
