@@ -39,6 +39,7 @@
           stop/1,
           assert/2,
           retract/2,
+          retract_match/2,
           add_rule/2,
           add_rule/3,
           remove_rule/2,
@@ -114,6 +115,9 @@ retract (EngineName, Fact) when is_list (Fact) ->
 retract (EngineName, Fact) when is_tuple (Fact) ->
   gen_server:call (EngineName, {retract, Fact}).
 
+
+retract_match(EngineName, MS) ->
+    gen_server:call (EngineName, {retract_match, MS}).
 
 
 %%====================================================================
@@ -327,6 +331,10 @@ handle_call ({assert, Fact}, _, State) ->
 
 handle_call ({retract, Fact}, _, State) ->
   NewState = retract_fact (State, Fact),
+  {reply, ok, NewState};
+
+handle_call ({retract_match, MS}, _, State) ->
+  NewState = retract_facts (State, MS),
   {reply, ok, NewState};
 
 handle_call ({add_rule, {Fun, Salience}, {PConds, NConds}}, _, State) ->
@@ -1161,42 +1169,49 @@ assert_fact (R, Fact) ->
 % rimuove un 'fatto' dalla Knowledge Base e se verifica qualche
 % condizione  viene eliminato anche dalla corrispondente alfa-memory
 retract_fact (R, Fact) ->
-  [Kb, Alfa, Join, Agenda, State] = R,
-  case lists:member (Fact, Kb) of
-    true ->
-      Kb1 = Kb -- [Fact],
-      check_cond ([Kb1, Alfa, Join, Agenda, State], Alfa, {Fact, minus});
-    false ->
-      R
-  end.
+    [Kb, Alfa, Join, Agenda, State] = R,
+    case lists:member (Fact, Kb) of
+        true ->
+            Kb1 = Kb -- [Fact],
+            check_cond ([Kb1, Alfa, Join, Agenda, State], Alfa, {Fact, minus});
+        false ->
+            R
+    end.
 
+retract_facts (R, FactMatch) ->
+    [Kb, Alfa, Join, Agenda, State] = R,
+    MSC = ets:match_spec_compile([{FactMatch, [], ['$_']}]),
+    Facts = ets:match_spec_run(Kb, MSC),
+    lists:foldl(fun(X, S) ->
+                        retract_fact(S, X)
+                end, R, Facts).
 
 
 check_cond (R, [], {Fact, Sign}) -> R;
 check_cond (R, [{C1, Tab, Alfa_fun} | T], {Fact, Sign} ) ->
-  case catch Alfa_fun(Fact) of
-    true ->
-      case Sign of
-        plus ->
-          ets:insert (Tab, Fact);
-        minus ->
-          ets:delete_object (Tab, Fact)
-      end,
-      R1 = pass_fact (R, Tab, {Fact, Sign}),
-      check_cond (R1, T, {Fact, Sign});
-    {'EXIT',{function_clause,_}} ->
-      check_cond(R, T, {Fact, Sign});
-    Other ->
-      check_cond(R, T, {Fact, Sign})
-  end.
+    case catch Alfa_fun(Fact) of
+        true ->
+            case Sign of
+                plus ->
+                    ets:insert (Tab, Fact);
+                minus ->
+                    ets:delete_object(Tab, Fact)
+            end,
+            R1 = pass_fact (R, Tab, {Fact, Sign}),
+            check_cond (R1, T, {Fact, Sign});
+        {'EXIT',{function_clause,_}} ->
+            check_cond(R, T, {Fact, Sign});
+        Other ->
+            check_cond(R, T, {Fact, Sign})
+    end.
 
 % propaga il 'fatto' a tutti i nodi che seguono l'alfa-memory
 % con indice Tab
 pass_fact (R, Tab, {Fact, Sign}) ->
-  [Kb, Alfa, Join, Agenda, State] = R,
-  Succ_node_list = eresye_tree_list:lookup_all (Tab, Join),
-  {Join1, Agenda1} = propagate (Succ_node_list, {Fact, Sign}, Join, Agenda),
-  [Kb, Alfa, Join1, Agenda1, State].
+    [Kb, Alfa, Join, Agenda, State] = R,
+    Succ_node_list = eresye_tree_list:lookup_all (Tab, Join),
+    {Join1, Agenda1} = propagate (Succ_node_list, {Fact, Sign}, Join, Agenda),
+    [Kb, Alfa, Join1, Agenda1, State].
 
 propagate ([], {Fact, Sign}, Join, Agenda) ->
   {Join, Agenda};
