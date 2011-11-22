@@ -129,30 +129,30 @@ add_rule (Name, Fun) ->
 %% Arguments: EngineName, Rule, Salience
 %%====================================================================
 add_rule (Name, {Module, Fun, ClauseID}, Salience) ->
-  add_rule (Name, {Module, Fun}, ClauseID, Salience);
+    add_rule (Name, {Module, Fun}, ClauseID, Salience);
 add_rule (Name, {Module, Fun}, Salience) ->
-  add_rule (Name, {Module, Fun}, 0, Salience).
+    add_rule (Name, {Module, Fun}, 0, Salience).
 
 add_rule (Name, Fun, ClauseID, Salience) ->
-  Ontology = get_ontology (Name),
-  case get_conds (Fun, Ontology, ClauseID) of
-    error -> error;
-    CondsList ->
-      lists:foreach (
-        fun (X)->
-            case X of
-              {error, Msg} ->
-                io:format(">> Errore!!!~n~w:~s~n",[Fun, Msg]);
-              {PConds, NConds} ->
-                %%io:format(">> PConds=~p~n",[PConds]),
-                %%io:format(">> NConds=~p~n",[NConds]),
-                gen_server:call (Name, {add_rule,
-                                        {Fun, Salience},
-                                        {PConds, NConds}})
-            end
-        end, CondsList),
-      ok
-  end.
+    Ontology = get_ontology (Name),
+    case get_conds (Fun, Ontology, ClauseID) of
+        error -> error;
+        CondsList ->
+            lists:foreach (
+              fun (X)->
+                      case X of
+                          {error, Msg} ->
+                              io:format(">> add_rule->get_conds error!!!~n~w:~s~n",[Fun, Msg]);
+                          {PConds, NConds} ->
+                              % io:format(">> PConds=~p~n",[PConds]),
+                              % io:format(">> NConds=~p~n",[NConds]),
+                              gen_server:call (Name, {add_rule,
+                                                      {Fun, Salience},
+                                                      {PConds, NConds}})
+                      end
+              end, CondsList),
+            ok
+    end.
 
 
 %%====================================================================
@@ -421,40 +421,42 @@ prepare_match_alpha_fun (Cond) ->
 
 
 get_conds ({Module, Func}, Ontology, ClauseID) ->
-  File = lists:concat (["src/", Module, '.erl']),
-  case epp:parse_file (File, ["."], []) of
-    {error, OpenError} ->
-      io:format(">> Errore!!!~n~w:~w~n", [{Module, Func}, OpenError]),
-      error;
-    {ok, Form} ->
-      Records = get_records (Form, []),
-      %%io:format (">> Records ~p~n", [Records]),
-      case search_fun (Form, Func, Records) of
-        {error, Msg} ->
-          io:format(">> Errore!!!~n~w:~s~n",[{Module,Func}, Msg]),
-          error;
-        {ok, CL} ->
-          ClauseList =
-            if
-              ClauseID > 0 -> [lists:nth (ClauseID, CL)];
-              true -> CL
-            end,
-          %%io:format ("Clauses ~p~n", [ClauseList]),
-          SolvedClauses =
-            if
-              Ontology == nil -> ClauseList;
-              true -> eresye_ontology_resolver:resolve_ontology (ClauseList,
-                                                                 Ontology)
-            end,
-          %%io:format (">>> ~p~n", [SolvedClauses]),
-          case read_clause(SolvedClauses, [], Records) of
-            {error, Msg2} ->
-              io:format(">> Errore!!!~n~w:~s~n",[{Module,Func}, Msg2]),
-              error;
-            CondsList -> CondsList
-          end
-      end
-  end.
+    File = lists:concat([Module, '.erl']),
+    code:load_file(Module),
+    {File2, _} = filename:find_src("eresye_logic"),
+    case epp:parse_file(File2 ++ ".erl", [".", "src", "include"], []) of
+        {error, OpenError} ->
+            io:format(">> parse_file error!!!~n~w:~w~n", [{Module, Func}, OpenError]),
+            error;
+        {ok, Form} ->
+            Records = get_records (Form, []),
+            %io:format (">> Records ~p~n", [Records]),
+            case search_fun (Form, Func, Records) of
+                {error, Msg} ->
+                    io:format(">> search_fun error!!!~n~w:~s~n",[{Module,Func}, Msg]),
+                    error;
+                {ok, CL} ->
+                    ClauseList =
+                        if
+                            ClauseID > 0 -> [lists:nth (ClauseID, CL)];
+                            true -> CL
+                        end,
+                    %io:format ("Clauses ~p~n", [ClauseList]),
+                    SolvedClauses =
+                        if
+                            Ontology == nil -> ClauseList;
+                            true -> eresye_ontology_resolver:resolve_ontology (ClauseList,
+                                                                               Ontology)
+                        end,
+                    %io:format (">>> ~p~n", [SolvedClauses]),
+                    case read_clause(SolvedClauses, [], Records) of
+                        {error, Msg2} ->
+                            io:format(">> read_clause error!!!~n~w:~s~n",[{Module,Func}, Msg2]),
+                            error;
+                        CondsList -> CondsList
+                    end
+            end
+    end.
 
 
 get_records ([], Acc) -> lists:reverse (Acc);
@@ -904,7 +906,7 @@ is_present (Cond, [{C1, Tab, Alfa_fun} | Other_cond]) ->
     false -> is_present(Cond, Other_cond)
   end.
 
-	
+
 same_cond (Cond1, Cond1) ->
   true;
 same_cond (Cond1, Cond2) ->
@@ -999,7 +1001,7 @@ get_atom (X) when hd(X)==$' ->    %'
 	    Sub = string:sub_string(X, 2, L-1),
 	    list_to_atom(Sub);
 	Other ->
-	    io:format(">> Errore (manca l'apice):~s~n",[X])
+	    io:format(">> get_atom error (manca l'apice):~s~n",[X])
     end;
 get_atom (X) ->
     X1 = string:strip(X),
@@ -1363,7 +1365,7 @@ refresh (N, Join) ->
 match (Wme, Tok, Join_fun) ->
     case catch Join_fun(Wme, Tok) of
 	true ->
-	    lists:append(Tok, [Wme]);	
+	    lists:append(Tok, [Wme]);
 	{'EXIT',{function_clause,_}} ->
 	    [];
 	Other ->
