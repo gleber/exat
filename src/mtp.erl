@@ -34,7 +34,6 @@
 %%====================================================================
 -export ([http/1,
           addresses/0,
-          http_mtp_post/3,
           http_mtp_encode_and_send/3]).
 
 -export ([init/1,
@@ -45,17 +44,9 @@
 %%====================================================================
 %% Macros
 %%====================================================================
--define (BAD_RESPONSE, {400, "Bad Request",
-                        [{"Content-Type", "text/plain"},
-                         {"Cache-Control", "no-cache"},
-                         {"Connection", "close"}],
-                        ""}).
+-define (BAD_RESPONSE, Req:respond(400)).
 
--define (OK_RESPONSE,  {200, "OK",
-                        [{"Content-Type", "text/plain"},
-                         {"Cache-Control", "no-cache"},
-                         {"Connection", "close"}],
-                        ""}).
+-define (OK_RESPONSE,  Req:ok("")).
 
 
 %%====================================================================
@@ -65,16 +56,16 @@
 %% Func: http/1
 %%====================================================================
 http (Port) ->
-  logger:start ('HTTP-MTP'),
-  logger:log ('HTTP-MTP', {"MTP Started at port ~w", [Port]}),
-  {ok, Hostname} = inet:gethostname (),
-  {ok, HostEnt} = inet:gethostbyname (Hostname),
-  MTPAddress = lists:flatten (
-                 ["http://", HostEnt#hostent.h_name, ":",
-                  integer_to_list (Port), "/acc" ]),
-  eresye:assert (agent_registry, {mtp_address, MTPAddress}),
-
-  http_server:start (Port, {mtp, http_mtp_post}, []).
+    logger:start ('HTTP-MTP'),
+    logger:log ('HTTP-MTP', {"MTP Started at port ~w", [Port]}),
+    {ok, Hostname} = inet:gethostname (),
+    {ok, HostEnt} = inet:gethostbyname (Hostname),
+    MTPAddress = lists:flatten (
+                   ["http://", HostEnt#hostent.h_name, ":",
+                    integer_to_list (Port), "/acc" ]),
+    eresye:assert (agent_registry, {mtp_address, MTPAddress}),
+    misultin:start_link([{port, Port},
+                         {loop, fun handle_http/1}]).
 
 %%====================================================================
 %% Func: addresses/0
@@ -86,16 +77,22 @@ addresses () ->
 %%====================================================================
 %% Func: http_mtp_post/3
 %%====================================================================
-http_mtp_post (Socket, ['POST', Url, Headers, Content], Params) ->
+handle_http(Req) ->
+    http_mtp_post(Req:get(method), Req:resource([lowercase, urldecode]), Req:get(headers), Req).
+
+http_mtp_post ('POST', Url, Headers, Req) ->
     %%io:format ("URL = ~s~n", [Url]),
     %%display_params (Headers),
-    ContentLines = http_server:split_lines (Content),
-    ContentType = http_server:get_key (Headers, "Content-Type"),
-    {ok, [Encoding, Media, EncodingParams]} =
-        http_server:media_type_decode (ContentType),
-    http_mtp_decode (Encoding, Media, EncodingParams, ContentLines);
-
-http_mtp_post (_, [_, _, _, _], _) -> ?BAD_RESPONSE.
+    Content = Req:parse_post(),
+    [{part, _, XmlContent}] =
+        lists:filter(fun({part, H, D}) ->
+                             "application/xml" == misultin_utility:header_get_value('Content-Type', H)
+                     end, Content),
+    [{part, _, SLContent}] =
+        lists:filter(fun({part, H, D}) ->
+                             "application/text" == misultin_utility:header_get_value('Content-Type', H)
+                     end, Content),
+    http_mtp_decode(Req, XmlContent, SLContent).
 
 
 %%
@@ -104,47 +101,33 @@ http_mtp_post (_, [_, _, _, _], _) -> ?BAD_RESPONSE.
 %%====================================================================
 %% Func: http_mtp_decode/3
 %%====================================================================
-http_mtp_decode ("multipart", _, EncodingParams, ContentLines) ->
-    Boundary = http_server:get_key (EncodingParams, "boundary"),
-    %%io:format ("Boundary ~s~n", [Boundary]),
-    SplittedLines = http_server:multi_part_split (ContentLines,
-                                                  "--" ++ Boundary),
-    %%io:format ("----~nLines ~s~n----~n", [lists:flatten(ContentLines)]),
-    [_, Envelope0, ACLMessage0 | _] = SplittedLines,
-    {To, From, ACLRepr} =
-        envelope:parse_xml_envelope (lists:flatten (
-                                       mtp_utils:skip_to_empty_line (Envelope0))),
-    ACLMessage = mtp_utils:replace_newlines ([], lists:flatten (
-                                                   mtp_utils:skip_to_empty_line (ACLMessage0))),
-    %%io:format ("To  = ~w~n", [To]),
-    %%io:format ("ACL len = ~w~n", [length (ACLMessage)]),
-    decode_and_forward_acl (To, From, ACLMessage, ACLRepr);
-
-http_mtp_decode (_, _, _, _) -> ?BAD_RESPONSE.
+http_mtp_decode(Req, XmlContent, SLContent) ->
+    {To, From, ACLRepr} = envelope:parse_xml_envelope(binary_to_list(XmlContent)),
+    decode_and_forward_acl (Req, To, From, SLContent, ACLRepr).
 
 %%
 %%
-decode_and_forward_acl (_, _, Message, "fipa.acl.rep.string.std") ->
-    DecodedMessage = sl:decode (Message),
-    %%io:format ("MSG = ~p~n", [DecodedMessage]),
+decode_and_forward_acl (Req, _, _, Message, "fipa.acl.rep.string.std") ->
+    DecodedMessage = sl:decode (binary_to_list(Message)),
+    %io:format ("MSG = ~p~n", [DecodedMessage]),
     ACLMessage = list_to_tuple ([ aclmessage |
                                   tuple_to_list (DecodedMessage)]),
-    %%io:format ("Message = ~w~n", [ACLMessage]),
-    %%io:format ("R = ~w~n", [ACLMessage#aclmessage.receiver]),
+    %io:format ("Message = ~w~n", [ACLMessage]),
+    %io:format ("R = ~w~n", [ACLMessage#aclmessage.receiver]),
 
-    %% decode content
+    % decode content
     ParsedMessage =
         case ontology_service:get_codec (ACLMessage#aclmessage.ontology) of
             {ok, Codec} ->
                 {ok, SL} = sl:decode (ACLMessage#aclmessage.content,
                                       ascii_sl, erlang_sl),
-                %%io:format ("Content = ~p~n", [SL]),
+                %io:format ("Content = ~p~n", [SL]),
                 ACLMessage#aclmessage { content = Codec:decode (SL) };
             _ -> ACLMessage
         end,
 
 
-    %% determine receiver list
+    % determine receiver list
     Receivers =
         case is_list (ParsedMessage#aclmessage.receiver) of
             true ->
@@ -153,7 +136,7 @@ decode_and_forward_acl (_, _, Message, "fipa.acl.rep.string.std") ->
                 [ParsedMessage#aclmessage.receiver]
         end,
     CurrentPlatform = exat:current_platform(),
-    %%io:format ("Receivers = ~w~n", [Receivers]),
+    %io:format ("Receivers = ~w~n", [Receivers]),
     LocalReceivers = lists:filter (
                        fun (X) ->
                                {_ID, HAP} =
@@ -162,17 +145,17 @@ decode_and_forward_acl (_, _, Message, "fipa.acl.rep.string.std") ->
                                HAP == CurrentPlatform
                        end, Receivers),
     MessagesToSend = [ParsedMessage#aclmessage { receiver = X } || X <- LocalReceivers],
-    %%io:format ("Parsed Message = ~w~n", [MessagesToSend]),
+    %io:format ("Parsed Message = ~w~n", [MessagesToSend]),
     lists:foreach (
       fun (X) ->
               Receiver = (X#aclmessage.receiver)#'agent-identifier'.name,
               {ID, _} = exat:split_agent_identifier (Receiver),
-              %%io:format ("Recv = ~w~n", [Receiver]),
+              %io:format ("Recv = ~w~n", [Receiver]),
               gen_server:call(list_to_atom (ID), [acl_erl_native, X])
       end, MessagesToSend),
     ?OK_RESPONSE;
 
-decode_and_forward_acl (_, _, _, _) -> ?BAD_RESPONSE.
+decode_and_forward_acl (Req, _, _, _, _) -> ?BAD_RESPONSE.
 
 
 display_params ([]) -> ok;
@@ -185,14 +168,14 @@ display_params ([{Param, Value} | T]) ->
 %% Func: http_mtp_encode_and_send/1
 %%====================================================================
 http_mtp_encode_and_send (To, From, Message) ->
-%%io:format ("Message ~w~n", [Message]),
+    %io:format ("Message ~w~n", [Message]),
     XX = fipa_ontology_sl_codec:encode (Message),
-%%io:format ("XX ~w~n", [XX]),
+    %io:format ("XX ~w~n", [XX]),
     ACL = sl:encode (XX),
-%%io:format ("ACL ~s~n", [ACL]),
+    %io:format ("ACL ~s~n", [ACL]),
 
     Envelope = envelope:make_xml_envelope (To, From, length (ACL)),
-%%io:format ("Envelope ~s~n", [Envelope]),
+    %io:format ("Envelope ~s~n", [Envelope]),
 
     HTTPBody = lists:flatten (
                  [[$\r, $\n],
@@ -215,34 +198,34 @@ http_mtp_encode_and_send (To, From, Message) ->
                 {"Content-Length", integer_to_list (length (HTTPBody))},
                 {"Connection", "close"}],
 
-%%display_params (Headers),
-%%io:format ("Body ~w~n", [HTTPBody]),
+    %display_params (Headers),
+    %io:format ("Body ~w~n", [HTTPBody]),
 
-%%io:format ("Receiver ~w,~w~n",
-%%           [(Message#aclmessage.receiver)#'agent-identifier'.name,
-%%            ReceiverAddr]),
+    %io:format ("Receiver ~w,~w~n",
+    %           [(Message#aclmessage.receiver)#'agent-identifier'.name,
+    %            ReceiverAddr]),
 
     Request = { ReceiverAddr,
                 Headers,
                 "multipart/mixed ; boundary=\"251D738450A171593A1583EB\"",
                 HTTPBody},
 
-%%   HTTPID = http:request (
-%%              post,
-%%              { ReceiverAddr,
-%%                Headers,
-%%                "multipart/mixed ; boundary=\"251D738450A171593A1583EB\"",
-%%                HTTPBody}, [], [{sync, true}]),
+    %   HTTPID = http:request (
+    %              post,
+    %              { ReceiverAddr,
+    %                Headers,
+    %                "multipart/mixed ; boundary=\"251D738450A171593A1583EB\"",
+    %                HTTPBody}, [], [{sync, true}]),
 
     HTTPID = gen_server:call (mtp_sender, {http_post, Request}),
 
     {ok, RequestID} = HTTPID,
     Result = RequestID,
-%%io:format ("Result ~p, ~p~n", [self (), Result]),
+    %io:format ("Result ~p, ~p~n", [self (), Result]),
     {StatusLine, ReceivedHeaders, ReceivedBody} = Result,
+    %io:format ("Status ~w,~s~n", [StatusCode, ReasonPhrase]),
+    %io:format ("Body ~s~n", [ReceivedBody]).
     {HttpVersion, StatusCode, ReasonPhrase} = StatusLine.
-  %%io:format ("Status ~w,~s~n", [StatusCode, ReasonPhrase]),
-  %%io:format ("Body ~s~n", [ReceivedBody]).
 
 
 

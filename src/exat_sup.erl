@@ -81,7 +81,7 @@ init ([]) ->
 
     MTP = {exat_platform,
            {exat_server, start_link, [Port]},
-           permanent, brutal_kill, worker, [exat_server]},
+           permanent, brutal_kill, supervisor, [exat_server]},
 
     MTP_SENDER = {mtp_sender_service,
                   {gen_server, start_link,

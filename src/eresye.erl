@@ -430,8 +430,7 @@ prepare_match_alpha_fun (Cond) ->
 
 get_conds ({Module, Func}, Ontology, ClauseID) ->
     File = lists:concat([Module, '.erl']),
-    code:load_file(Module),
-    {File2, _} = filename:find_src("eresye_logic"),
+    {File2, _} = filename:find_src(Module),
     case epp:parse_file(File2 ++ ".erl", [".", "src", "include"], []) of
         {error, OpenError} ->
             io:format(">> parse_file error!!!~n~w:~w~n", [{Module, Func}, OpenError]),

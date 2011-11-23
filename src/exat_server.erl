@@ -53,22 +53,20 @@
 %%====================================================================
 
 start_link (Port) ->
-  io:format ("~n"),
-  io:format ("              __      __    __    _______~n"),
-  io:format ("              \\ \\    / /   /  \\  |__   __|~n"),
-  io:format ("        ____   \\ \\  / /   / /\\ \\    | |~n"),
-  io:format ("       / __ \\   \\ \\/ /   | |__| |   | |~n"),
-  io:format ("      | ____/   / /\\ \\   |  __  |   | |~n"),
-  io:format ("      | \\____  / /  \\ \\  | |  | |   | |~n"),
-  io:format ("       \\____/ /_/    \\_\\ |_|  |_|   |_|~n"),
-  io:format ("*****                                     *****************~n"),
-  io:format ("* The erlang eXperimental Agent Tool -- Release 1.3.0-EYE *~n"),
-  io:format ("***********************************************************~n"),
-  io:format ("eXAT, an erlang eXperimental Agent Tool~n"),
-  io:format ("ERESYE, an ERlang Expert SYstem Engine~n"),
-  io:format ("Copyright (C) 2003-07 Corrado Santoro (csanto@diit.unict.it)~n"),
-  io:format ("Copyright (C) 2005-07 Francesca Gangemi (francesca@erlang-consulting.com)~n"),
-  {ok, Pid} = mtp:http (Port),
-  register (mtp, Pid),
-  {ok, Pid}.
+    io:format ("~n"),
+    io:format ("              __      __    __    _______~n"),
+    io:format ("              \\ \\    / /   /  \\  |__   __|~n"),
+    io:format ("        ____   \\ \\  / /   / /\\ \\    | |~n"),
+    io:format ("       / __ \\   \\ \\/ /   | |__| |   | |~n"),
+    io:format ("      | ____/   / /\\ \\   |  __  |   | |~n"),
+    io:format ("      | \\____  / /  \\ \\  | |  | |   | |~n"),
+    io:format ("       \\____/ /_/    \\_\\ |_|  |_|   |_|~n"),
+    io:format ("*****                                     *****************~n"),
+    io:format ("* The erlang eXperimental Agent Tool -- Release 1.3.0-EYE *~n"),
+    io:format ("***********************************************************~n"),
+    io:format ("eXAT, an erlang eXperimental Agent Tool~n"),
+    io:format ("ERESYE, an ERlang Expert SYstem Engine~n"),
+    io:format ("Copyright (C) 2003-07 Corrado Santoro (csanto@diit.unict.it)~n"),
+    io:format ("Copyright (C) 2005-07 Francesca Gangemi (francesca@erlang-consulting.com)~n"),
+    mtp:http (Port).
 
