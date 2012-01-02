@@ -1,25 +1,25 @@
-%
-% exat.erl
-%
-% ----------------------------------------------------------------------
-%
-%  eXAT, an erlang eXperimental Agent Tool
-%  Copyright (C) 2005-07 Corrado Santoro (csanto@diit.unict.it)
-%
-%  This program is free software: you can redistribute it and/or modify
-%  it under the terms of the GNU General Public License as published by
-%  the Free Software Foundation, either version 3 of the License, or
-%  (at your option) any later version.
-%
-%  This program is distributed in the hope that it will be useful,
-%  but WITHOUT ANY WARRANTY; without even the implied warranty of
-%  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-%  GNU General Public License for more details.
-%
-%  You should have received a copy of the GNU General Public License
-%  along with this program.  If not, see <http://www.gnu.org/licenses/>
-%
-%
+%%
+%% exat.erl
+%%
+%% ----------------------------------------------------------------------
+%%
+%%  eXAT, an erlang eXperimental Agent Tool
+%%  Copyright (C) 2005-07 Corrado Santoro (csanto@diit.unict.it)
+%%
+%%  This program is free software: you can redistribute it and/or modify
+%%  it under the terms of the GNU General Public License as published by
+%%  the Free Software Foundation, either version 3 of the License, or
+%%  (at your option) any later version.
+%%
+%%  This program is distributed in the hope that it will be useful,
+%%  but WITHOUT ANY WARRANTY; without even the implied warranty of
+%%  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%%  GNU General Public License for more details.
+%%
+%%  You should have received a copy of the GNU General Public License
+%%  along with this program.  If not, see <http://www.gnu.org/licenses/>
+%%
+%%
 -module (exat).
 -behaviour (application).
 
@@ -69,7 +69,7 @@ start (Type, StartArgs) ->
 %% Returns: any
 %%====================================================================
 stop (State) ->
-  ok.
+    ok.
 
 
 
@@ -78,9 +78,9 @@ stop (State) ->
 %% Returns: string()
 %%====================================================================
 current_platform () ->
-  {CurrentPlatform, _} = lists:splitwith (fun(X) -> X =/= $@ end ,
-                                          atom_to_list (node ())),
-  CurrentPlatform.
+    {CurrentPlatform, [$@ | Hostname]} = lists:splitwith(fun(X) -> X =/= $@ end ,
+                                           atom_to_list (node ())),
+    CurrentPlatform ++ "." ++ Hostname.
 
 
 
@@ -89,11 +89,12 @@ current_platform () ->
 %% Returns: {string(), string()}
 %%====================================================================
 split_agent_identifier (AgentID) ->
-  {LocalID, HAP} = lists:splitwith (fun(X) -> X =/= $@ end , AgentID),
-  if
-    HAP == [] -> {LocalID, current_platform()};
-    true -> [_ | RealHAP] = HAP, {LocalID, RealHAP}
-  end.
+    case lists:splitwith(fun(X) -> X =/= $@ end , AgentID) of
+        {LocalID, []} ->
+            {LocalID, current_platform()};
+        {LocalID, [$@ | RealHAP]} ->
+            {LocalID, RealHAP}
+    end.
 
 
 
@@ -101,11 +102,11 @@ split_agent_identifier (AgentID) ->
 %% Func: get_argument/1
 %% Returns: {ok, [string()]} | error
 %%====================================================================
-get_argument (Name) ->
-  case init:get_argument (Name) of
-    {ok, [List]} -> {ok, List};
-    _ -> error
-  end.
+get_argument(Name) ->
+    case init:get_argument(Name) of
+        {ok, [List]} -> {ok, List};
+        _ -> error
+    end.
 
 
 %%====================================================================
