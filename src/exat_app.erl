@@ -60,14 +60,15 @@ start() ->
             case ApplicationList of
                 [] -> ok;
                 _ ->
-                    logger:log ('AMS',
-                                {"Staring Applications: ~s",
-                                 [lists:flatten (["{" ++ X ++ "}" ||
-                                                     X <- ApplicationList])]}),
-                    lists:foreach (fun (X) ->
-                                           M = list_to_atom (X),
-                                           M:start ()
-                                   end, ApplicationList)
+                    logger:log('AMS',
+                               {"Staring Applications: ~s",
+                                [lists:flatten (["{" ++ X ++ "}" ||
+                                                    X <- ApplicationList])]}),
+                    lists:foreach(fun (X) ->
+                                          M = list_to_atom (X),
+                                          io:format("~p~n", [M]),
+                                          M:start ()
+                                  end, ApplicationList)
             end;
         _ -> ok
     end.
