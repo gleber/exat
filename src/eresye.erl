@@ -40,6 +40,7 @@
           assert/2,
           retract/2,
           retract_match/2,
+          retract_select/2,
           add_rule/2,
           add_rule/3,
           remove_rule/2,
@@ -118,6 +119,9 @@ retract (EngineName, Fact) when is_tuple (Fact) ->
 
 retract_match(EngineName, MS) ->
     gen_server:call (EngineName, {retract_match, MS}).
+
+retract_select(EngineName, MS) ->
+    gen_server:call (EngineName, {retract_select, MS}).
 
 
 %%====================================================================
@@ -333,6 +337,11 @@ handle_call ({retract, Fact}, _, State) ->
     {reply, ok, NewState};
 
 handle_call ({retract_match, MS}, _, State) ->
+    MS2 = [{MS, [], ['$_']}],
+    NewState = retract_facts (State, MS2),
+    {reply, ok, NewState};
+
+handle_call ({retract_select, MS}, _, State) ->
     NewState = retract_facts (State, MS),
     {reply, ok, NewState};
 
@@ -1175,7 +1184,7 @@ retract_fact (R, Fact) ->
 
 retract_facts(R, FactMatch) ->
     [Kb, Alfa, Join, Agenda, State] = R,
-    MSC = ets:match_spec_compile([{FactMatch, [], ['$_']}]),
+    MSC = ets:match_spec_compile(FactMatch),
     Facts = ets:match_spec_run(Kb, MSC),
     lists:foldl(fun(X, S) ->
                         retract_fact(S, X)
