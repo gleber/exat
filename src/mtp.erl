@@ -190,7 +190,10 @@ http_mtp_encode_and_send (To, From, Message) ->
 
     [ReceiverAddr | _] = To#'agent-identifier'.addresses,
 
-    {http, _, Host, Port, _, _} = http_uri:parse (ReceiverAddr),
+    {Host, Port} = case http_uri:parse (ReceiverAddr) of
+                       {http, _, H, P, _, _} -> {H, P};
+                       {ok,{http,_,H,P,_,_}} -> {H, P}
+                   end,
 
     Headers = [ {"Cache-Control", "no-cache"},
                 {"Mime-Version", "1.0"},

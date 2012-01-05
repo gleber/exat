@@ -1,11 +1,11 @@
 -module(sl_parser).
 -export([parse/1, parse_and_scan/1, format_error/1]).
 
--file("/usr/lib/erlang/lib/parsetools-2.0.5/include/yeccpre.hrl", 0).
+-file("/opt/erlang/r15b/lib/parsetools-2.0.7/include/yeccpre.hrl", 0).
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1996-2010. All Rights Reserved.
+%% Copyright Ericsson AB 1996-2011. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -32,10 +32,11 @@ parse(Tokens) ->
 
 -spec parse_and_scan({function() | {atom(), atom()}, [_]}
                      | {atom(), atom(), [_]}) -> yecc_ret().
-parse_and_scan({F, A}) -> % Fun or {M, F}
+parse_and_scan({F, A}) ->
     yeccpars0([], {{F, A}, no_line}, 0, [], []);
 parse_and_scan({M, F, A}) ->
-    yeccpars0([], {{{M, F}, A}, no_line}, 0, [], []).
+    Arity = length(A),
+    yeccpars0([], {{fun M:F/Arity, A}, no_line}, 0, [], []).
 
 -spec format_error(any()) -> [char() | list()].
 format_error(Message) ->
@@ -71,7 +72,7 @@ yeccpars0(Tokens, Tzr, State, States, Vstack) ->
             Error
     end.
 
-yecc_error_type(function_clause, [{?MODULE,F,ArityOrArgs} | _]) ->
+yecc_error_type(function_clause, [{?MODULE,F,ArityOrArgs,_} | _]) ->
     case atom_to_list(F) of
         "yeccgoto_" ++ SymbolL ->
             {ok,[{atom,_,Symbol}],_} = erl_scan:string(SymbolL),
@@ -184,7 +185,7 @@ yecctoken2string(Other) ->
 
 
 
--file("src/sl_parser.erl", 187).
+-file("src/sl_parser.erl", 188).
 
 yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_0(S, Cat, Ss, Stack, T, Ts, Tzr);
