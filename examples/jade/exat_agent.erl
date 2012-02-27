@@ -2,6 +2,7 @@
 -export([extends/0]).
 -export([pattern/2,event/2,action/2,on_starting/1,
   do_request/4,start/0]).
+
 -include_lib("exat/include/acl.hrl").
 -include_lib("exat/include/fipa_ontology.hrl").
 

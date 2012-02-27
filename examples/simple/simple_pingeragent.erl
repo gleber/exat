@@ -28,7 +28,7 @@ stop() ->
 % agents callback
 handle_acl(#aclmessage{speechact = 'INFORM',
                        content = "alive"} = Msg, {_, DestAgent} = State) ->
-    io:format("~p is alive!~n", [DestAgent]),
+    io:format("~p is alive, since I got: ~p~n~n", [DestAgent, Msg]),
     {noreply, State};
 
 handle_acl(#aclmessage{} = Msg, State) ->
@@ -39,7 +39,7 @@ handle_acl(#aclmessage{} = Msg, State) ->
 %% gen_server callbacks
 
 init(Name, [DestAgent]) ->
-    timer:send_interval(5000, ping),
+    timer:send_interval(500, ping),
     {ok, {Name, DestAgent}}.
 
 handle_call(Call, _From, State) ->

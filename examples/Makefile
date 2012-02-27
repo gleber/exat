@@ -2,11 +2,13 @@
 # Makefile
 #
 
+DIRS=$(shell echo */)
 
 all:
-	@(cd eresye;make)
+	for i in $(DIRS) ; do \
+		(cd $$i; make) ; \
+	done
 
 clean:
+	@(cd simple;make clean)
 	@(cd eresye;make clean)
-
-

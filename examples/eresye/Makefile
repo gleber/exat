@@ -2,11 +2,7 @@
 # Makefile
 #
 
-EBIN=.
-
-include ../../Makefile.conf
-
-.SUFFIXES: .erl .beam
+BEAM=erlc
 
 OBJS=\
 auto.beam \
@@ -16,8 +12,6 @@ journal_sample.beam \
 phil.beam \
 prodcons.beam \
 sieve.beam
-
-
 
 
 ERL_OBJS=$(foreach file, $(OBJS), $(file))
@@ -38,4 +32,3 @@ clean:
 
 clearbak:
 	@$(FIND) . -type f -name \*~ -exec rm {} \;
-

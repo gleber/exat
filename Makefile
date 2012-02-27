@@ -1,6 +1,10 @@
 all:
 	./rebar compile
 
+deps:
+	./rebar get-deps
+	./rebar compile
+
 clean:
 	./rebar clean
 

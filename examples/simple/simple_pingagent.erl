@@ -28,7 +28,9 @@ stop() ->
 % agents callback
 
 handle_acl(#aclmessage{speechact = 'QUERY-REF',
+                       sender = Sender,
                        content = "ping"} = Msg, State) ->
+    io:format("Got ping query from ~p: ~p~n~nInforming that I'm alive!~n~n", [Sender, Msg]),
     spawn(fun() -> acl:reply(Msg, 'INFORM', "alive") end),
     {noreply, State};
 
