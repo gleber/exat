@@ -43,8 +43,8 @@
 %% Internal exports
 %%====================================================================
 
--export([code_change/3, handle_call/3, init/1,
-         terminate/2]).
+-export([code_change/3, handle_call/3, handle_cast/2, handle_info/2, 
+         init/1, terminate/2]).
 
 %%====================================================================
 %% External functions
@@ -335,6 +335,16 @@ handle_call({get_rete}, _, State) ->
 handle_call({get_ontology}, _, State) ->
     [_, _, _, _, Ontology] = State,
     {reply, Ontology, State}.
+
+%%====================================================================
+%% Cast handler
+%%====================================================================
+handle_cast(Cast, State) -> {stop, {unknown_cast, Cast}, State}.
+
+%%====================================================================
+%% Any message handler
+%%====================================================================
+handle_info(Any, State) -> {stop, {unknown_info, Any}, State}.
 
 %%====================================================================
 %% Func: code_change/3

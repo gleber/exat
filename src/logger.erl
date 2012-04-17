@@ -22,7 +22,9 @@
 %%
 -module(logger).
 
--behaviour(gen_event).%%====================================================================
+-behaviour(gen_event).
+
+%%====================================================================
 %% Include files
 %%====================================================================
 
@@ -36,8 +38,8 @@
 %% Internal exports
 %%====================================================================
 
--export([code_change/3, handle_event/2, init/1,
-         terminate/2]).
+-export([code_change/3, handle_event/2, handle_call/2, handle_info/2,
+         init/1, terminate/2]).
 
 %%====================================================================
 %% External functions
@@ -86,6 +88,12 @@ handle_event(LogEvent, State) ->
         LogString -> io:format("[~w] ~s~n", [State, LogString])
     end,
     {ok, State}.
+
+handle_call(Call, State) ->
+    {stop, {unknown_call, Call}, State}.
+
+handle_info(Info, State) ->
+    {stop, {unknown_info, Info}, State}.
 
 %%====================================================================
 %% Func: terminate/2

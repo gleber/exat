@@ -27,10 +27,12 @@
 
 -include("fipa_ontology.hrl").
 
--export([code_change/3, get_acl_semantics/1, get_mind/1,
-         get_property/2, handle_call/3, handle_cast/2,
-         handle_info/2, init/1, join/1, kill/1, new/2, new/3,
-         set_property/3, set_rational/3, stop/1, terminate/2]).
+-export([get_acl_semantics/1, get_mind/1, get_property/2, join/1,
+         kill/1, new/2, new/3, set_property/3, set_rational/3, stop/1
+        ]).
+
+-export([code_change/3, terminate/2, handle_call/3, handle_cast/2,
+         init/1, handle_info/2, behaviour_info/1]).
 
 %% send_message/4,
 %% get_message/1,
@@ -38,7 +40,7 @@
 
 -spec behaviour_info(atom()) -> 'undefined' | [{atom(), arity()}].
 behaviour_info(callbacks) ->
-    [{init,1},{handle_call,3},{handle_cast,2},{handle_info,2},
+    [{init,2},{handle_call,3},{handle_cast,2},{handle_info,2},
      {terminate,2},{code_change,3}];
 behaviour_info(_Other) ->
     undefined.

@@ -30,10 +30,12 @@
 -include("fipa_ontology.hrl").
 
 -export([behave/2, get_acl_semantics/1, get_behaviour/1,
-         get_message/1, get_mind/1, get_property/2,
-         handle_call/3, handle_cast/2, init/1, join/1, kill/1,
+         get_message/1, get_mind/1, get_property/2, join/1, kill/1,
          match_message/2, new/2, send_message/4, set_behaviour/2,
-         set_property/3, set_rational/3, stop/1, terminate/2]).
+         set_property/3, set_rational/3, stop/1]).
+
+-export([init/1, code_change/3, handle_call/3, handle_cast/2,
+         handle_info/2, terminate/2]).
 
 -define(AGENT_BEHAVIOURS, '__AGENT_BEHAVIOURS').
 
@@ -270,6 +272,12 @@ terminate(normal, State) ->
     ok.
 
 %%
+%% Code Change
+%%
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
+%%
 %% Gets a property from agent
 %%
 handle_call([get_property, PropertyName], From,
@@ -359,6 +367,11 @@ handle_cast([match_message, Pattern, From],
 %% Stops the agent process
 %%
 handle_cast(stop, State) -> {stop, normal, State}.
+
+%%
+%% Any message handler
+%%
+handle_info(Any, State) -> {stop, {unknown_info, Any}, State}.
 
 %%
 %% OTHER FUNCTIONS

@@ -37,7 +37,7 @@
 %% Internal exports
 %%====================================================================
 
--export([code_change/3, handle_call/3, handle_cast/2,
+-export([code_change/3, handle_call/3, handle_cast/2, handle_info/2,
          init/1, terminate/2]).
 
 -behaviour(gen_server).
@@ -294,6 +294,12 @@ handle_call_1({_, _, _, Id}) -> Id.
 %%====================================================================
 handle_cast({schedule}, Agenda) ->
     {noreply, after_execution_schedule__(Agenda)}.
+
+%%====================================================================
+%% Function: handle_info/2
+%%====================================================================
+handle_info(Any, State) -> 
+    {stop, {unknown_info, Any}, State}.
 
 after_activation_schedule__(Agenda) ->
     {Strategy, RuleList, ExecutorPid, ExecState, NextId} =

@@ -33,7 +33,7 @@
 %%====================================================================
 -export([get_codec/1, register_codec/2]).
 
--export([code_change/3, handle_call/3, handle_info/2,
+-export([code_change/3, handle_call/3, handle_info/2, handle_cast/2,
          init/1, terminate/2]).
 
 %%====================================================================
@@ -90,7 +90,11 @@ handle_call({get_codec, OntologyName}, _, Dict) ->
 %%====================================================================
 %% Function: handle_info/2
 %%====================================================================
-handle_info(_, State) -> {noreply, State}.
+handle_info(Any, State) -> 
+    {stop, {unknown_info, Any}, State}.
+
+handle_cast(Call, State) ->
+    {stop, {unknown_cast, Call}, State}.
 
 %%====================================================================
 %% Function: terminate/2
