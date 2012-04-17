@@ -20,8 +20,9 @@
 %%  along with this program.  If not, see <http://www.gnu.org/licenses/>
 %%
 %%
--module (exat).
--behaviour (application).
+-module(exat).
+
+-behaviour(application).
 
 %%====================================================================
 %% Include files
@@ -31,17 +32,14 @@
 %% External exports
 %%====================================================================
 
--export ([start/2,
-          stop/1,
-          current_platform/0,
-          split_agent_identifier/1,
-          get_argument/1]).
+-export([current_platform/0, get_argument/1,
+         split_agent_identifier/1, start/2, stop/1]).
 
 %%====================================================================
 %% Internal exports
 %%====================================================================
 
--export ([]).
+-export([]).
 
 %%====================================================================
 %% Macros
@@ -60,43 +58,35 @@
 %%          {ok, Pid, State} |
 %%          {error, Reason}
 %%====================================================================
-start (Type, StartArgs) ->
-    exat_sup:start_link().
-
+start(Type, StartArgs) -> exat_sup:start_link().
 
 %%====================================================================
 %% Func: stop/1
 %% Returns: any
 %%====================================================================
-stop (State) ->
-    ok.
-
-
+stop(State) -> ok.
 
 %%====================================================================
 %% Func: current_platform/0
 %% Returns: string()
 %%====================================================================
-current_platform () ->
-    {CurrentPlatform, [$@ | Hostname]} = lists:splitwith(fun(X) -> X =/= $@ end ,
-                                           atom_to_list (node ())),
+current_platform() ->
+    {CurrentPlatform, [$@ | Hostname]} = lists:splitwith(fun
+                                                             (X) -> X =/= $@
+                                                         end,
+                                                         atom_to_list(node())),
     CurrentPlatform ++ "." ++ Hostname.
-
-
 
 %%====================================================================
 %% Func: split_agent_identifier/1
 %% Returns: {string(), string()}
 %%====================================================================
-split_agent_identifier (AgentID) ->
-    case lists:splitwith(fun(X) -> X =/= $@ end , AgentID) of
-        {LocalID, []} ->
-            {LocalID, current_platform()};
-        {LocalID, [$@ | RealHAP]} ->
-            {LocalID, RealHAP}
+split_agent_identifier(AgentID) ->
+    case lists:splitwith(fun (X) -> X =/= $@ end, AgentID)
+    of
+        {LocalID, []} -> {LocalID, current_platform()};
+        {LocalID, [$@ | RealHAP]} -> {LocalID, RealHAP}
     end.
-
-
 
 %%====================================================================
 %% Func: get_argument/1
@@ -108,8 +98,6 @@ get_argument(Name) ->
         _ -> error
     end.
 
-
 %%====================================================================
 %% Internal functions
 %%====================================================================
-

@@ -21,33 +21,32 @@
 %%
 %%
 -module(multisync).
--export([new/0, add_task/4, wait_one/1, abort/1]).
+
+-export([abort/1, add_task/4, new/0, wait_one/1]).
 
 new() ->
-    O = object:new(sync),
-    object:set(O, 'tasklist', []),
-    O.
+    O = object:new(sync), object:set(O, tasklist, []), O.
 
 add_task(Sync, Module, Proc, Params) ->
     %%io:format("Exec task ~w\n", [Proc]),
-    OldList = object:get(Sync, 'tasklist'),
+    OldList = object:get(Sync, tasklist),
     Pid = spawn(Module, Proc, [Sync | Params]),
     List = [Pid | OldList],
-    object:set(Sync, 'tasklist', List),
+    object:set(Sync, tasklist, List),
     ok.
 
 wait_one(Sync) ->
     Result = object:call(Sync, wait),
     %%io:format("Wait result ~w\n", [Result]),
-    kill_all(object:get(Sync, 'tasklist')),
+    kill_all(object:get(Sync, tasklist)),
     object:delete(Sync),
     Result.
 
 abort(Sync) ->
-    kill_all(object:get(Sync, 'tasklist')),
+    kill_all(object:get(Sync, tasklist)),
     object:delete(Sync),
     ok.
 
 kill_all([]) -> nil;
-kill_all([H]) -> catch(exit(H, kill));
-kill_all([H|T]) -> kill_all([H]), kill_all(T).
+kill_all([H]) -> catch exit(H, kill);
+kill_all([H | T]) -> kill_all([H]), kill_all(T).

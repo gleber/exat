@@ -34,31 +34,27 @@
 %%
 
 -module(ams).
--export([extends/0,
-          pattern/2,
-          event/2,
-          action/2,
-          request_proc/4]).
 
--export([start_link/0,
-         register_agent/1,
-         de_register_agent/1,
-         get_registered_agents/0]).
+-export([action/2, event/2, extends/0, pattern/2,
+         request_proc/4]).
+
+-export([de_register_agent/1, get_registered_agents/0,
+         register_agent/1, start_link/0]).
 
 -include("acl.hrl").
+
 -include("fipa_ontology.hrl").
 
 extends() -> nil.
 
-pattern(Self, request) -> [#aclmessage {speechact = 'REQUEST',
-                                         ontology = "FIPA-Agent-Management",
-                                         protocol = "fipa-request"}].
+pattern(Self, request) ->
+    [#aclmessage{speechact = 'REQUEST',
+                 ontology = "FIPA-Agent-Management",
+                 protocol = "fipa-request"}].
 
 event(Self, request_event) -> {acl, request}.
 
 action(Self, start) -> [{request_event, request_proc}].
-
-
 
 request_proc(Self, EventName, Message, ActionName) ->
     %%io:format("Received msg ~w\n", [Message]),
@@ -69,43 +65,32 @@ request_proc(Self, EventName, Message, ActionName) ->
     %%io:format("Reply ~w~n", [ContentReply]),
     acl:reply(Message, 'INFORM', ContentReply).
 
-
-
-prepare_reply([Content = #action { '1' = #'get-description'{} }]) ->
-    logger:log('AMS',"get-description"),
-    APService = #'ap-service' { name = "fipa.mts.mtp.http.std",
-                                type = "fipa.mts.mtp.http.std",
-                                addresses = mtp:addresses()},
-    APDescription = #'ap-description' { name = exat:current_platform(),
-                                        'ap-services' = [APService]},
-    Result = #result {
-      '0'  = Content,
-      '1' =  [APDescription]},
+prepare_reply([Content = #action{'1' =
+                                     #'get-description'{}}]) ->
+    logger:log('AMS', "get-description"),
+    APService = #'ap-service'{name =
+                                  "fipa.mts.mtp.http.std",
+                              type = "fipa.mts.mtp.http.std",
+                              addresses = mtp:addresses()},
+    APDescription = #'ap-description'{name =
+                                          exat:current_platform(),
+                                      'ap-services' = [APService]},
+    Result = #result{'0' = Content, '1' = [APDescription]},
     [Result];
-
-
-
-prepare_reply([Content = #action {'1' = #'search'{
-                                     '0' = #'ams-agent-description' { }
-                                    } }]) ->
-    logger:log('AMS',"search ams-agent-description"),
-    Agents = [#'agent-identifier'
-              { name = X,
-                addresses = mtp:addresses() }
+prepare_reply([Content = #action{'1' =
+                                     #search{'0' =
+                                                 #'ams-agent-description'{}}}]) ->
+    logger:log('AMS', "search ams-agent-description"),
+    Agents = [#'agent-identifier'{name = X,
+                                  addresses = mtp:addresses()}
               || X <- ams:get_registered_agents()],
-    Descriptions =
-        [#'ams-agent-description' { name = X,
-                                    ownership = "NONE",
-                                    state = "active" }
-         || X <- Agents],
+    Descriptions = [#'ams-agent-description'{name = X,
+                                             ownership = "NONE",
+                                             state = "active"}
+                    || X <- Agents],
     %%io:format("DS ~w~n", [Descriptions]),
-    Result = #result {
-      '0'  = Content,
-      '1' =  Descriptions},
+    Result = #result{'0' = Content, '1' = Descriptions},
     [Result].
-
-
-
 
 %%====================================================================
 %% Func: start_link/0
@@ -113,15 +98,13 @@ prepare_reply([Content = #action {'1' = #'search'{
 %%====================================================================
 start_link() ->
     logger:start('AMS'),
-    logger:log('AMS',"Staring AMS."),
+    logger:log('AMS', "Staring AMS."),
     ontology_service:register_codec("FIPA-Agent-Management",
-                                     fipa_ontology_sl_codec),
+                                    fipa_ontology_sl_codec),
     agent:new(ams, [{behaviour, ams}]),
     [BehaviourObject] = agent:get_behaviour(ams),
     Pid = object:executorof(BehaviourObject),
     {ok, Pid}.
-
-
 
 %%====================================================================
 %% Func: register_agent/1
@@ -130,8 +113,6 @@ start_link() ->
 register_agent(AgentName) ->
     eresye:assert(agent_registry, {agent, AgentName}).
 
-
-
 %%====================================================================
 %% Func: de_register_agent/1
 %% Returns: ok.
@@ -139,15 +120,14 @@ register_agent(AgentName) ->
 de_register_agent(AgentName) ->
     eresye:retract(agent_registry, {agent, AgentName}).
 
-
-
 %%====================================================================
 %% Func: get_registered_agents/0
 %% Returns: [string()].
 %%====================================================================
 get_registered_agents() ->
-    AgentList = eresye:query_kb(agent_registry, {agent, '_'}),
-    AgentLocalNames = [ X || {_, X} <- AgentList ],
+    AgentList = eresye:query_kb(agent_registry,
+                                {agent, '_'}),
+    AgentLocalNames = [X || {_, X} <- AgentList],
     PlatformName = exat:current_platform(),
-    [ lists:flatten([atom_to_list(X), "@", PlatformName])
-      || X <- AgentLocalNames ].
+    [lists:flatten([atom_to_list(X), "@", PlatformName])
+     || X <- AgentLocalNames].

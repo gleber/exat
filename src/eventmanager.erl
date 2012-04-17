@@ -21,11 +21,9 @@
 %%
 %%
 -module(eventmanager).
--export([silent_event/4,
-         timeout_event/4,
-         acl_event/4,
-         eres_event/4,
-         eventof/1]).
+
+-export([acl_event/4, eres_event/4, eventof/1,
+         silent_event/4, timeout_event/4]).
 
 eventof(timeout) -> timeout_event;
 eventof(acl) -> acl_event;
@@ -54,10 +52,10 @@ acl_event(Sync, Agent, Pattern, Proc) ->
     Message = agent:match_message(Agent, Pattern),
     object:call(Sync, signal, [{acl, Message, Proc}]).
 
-eres_event(Sync, Agent, {Engine, read, Pattern}, Proc) ->
+eres_event(Sync, Agent, {Engine, read, Pattern},
+           Proc) ->
     Data = eresye:wait(Engine, Pattern),
     object:call(Sync, signal, [{eres, Data, Proc}]);
-
 eres_event(Sync, Agent, {Engine, get, Pattern}, Proc) ->
     Data = eresye:wait_and_retract(Engine, Pattern),
     %%io:format("eres got ~w\n", [Data]),
