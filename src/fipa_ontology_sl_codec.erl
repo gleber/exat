@@ -1557,7 +1557,6 @@ decode(X) ->
         _ -> X
     end.
 
-set_of(["set" | L]) -> decode(L);
-set_of(["set", L]) -> decode(L).
+set_of(["set" | L]) -> decode(L).
 
 sequence_of(["sequence" | L]) -> decode(L).

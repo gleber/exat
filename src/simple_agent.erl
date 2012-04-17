@@ -36,7 +36,12 @@
 %% get_message/1,
 %% match_message/2,
 
-- spec ( { { behaviour_info , 1 } , [ { type , 50 , 'fun' , [ { type , 50 , product , [ { type , 50 , atom , [ ] } ] } , { type , 50 , union , [ { atom , 50 , undefined } , { type , 50 , list , [ { type , 50 , tuple , [ { type , 50 , atom , [ ] } , { type , 50 , arity , [ ] } ] } ] } ] } ] } ] } ) .
+-spec behaviour_info(atom()) -> 'undefined' | [{atom(), arity()}].
+behaviour_info(callbacks) ->
+    [{init,1},{handle_call,3},{handle_cast,2},{handle_info,2},
+     {terminate,2},{code_change,3}];
+behaviour_info(_Other) ->
+    undefined.
 
 
 -record(state,

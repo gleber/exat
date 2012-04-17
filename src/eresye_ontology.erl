@@ -279,9 +279,9 @@ resolve_inheritance(Acc, Classes, [Class | T]) ->
     SuperClass = get_class(Class#ontology_class.superclass,
                            Classes),
     NewClass = Class#ontology_class{properties =
-                                        lists:foldl(fun (X, Acc) ->
+                                        lists:foldl(fun (X, Accc) ->
                                                             override_property([],
-                                                                              Acc,
+                                                                              Accc,
                                                                               X)
                                                     end,
                                                     SuperClass#ontology_class.properties,
