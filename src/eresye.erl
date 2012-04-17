@@ -1012,11 +1012,11 @@ to_elem (I1, I2, I3, L) ->
 get_atom (X) when hd(X)==$' ->    %'
     L = length(X),
     case lists:nth(L, X) of
-	39 ->
-	    Sub = string:sub_string(X, 2, L-1),
-	    list_to_atom(Sub);
-	Other ->
-	    io:format(">> get_atom error (manca l'apice):~s~n",[X])
+        39 ->
+            Sub = string:sub_string(X, 2, L-1),
+            list_to_atom(Sub);
+        Other ->
+            io:format(">> get_atom error (manca l'apice):~s~n",[X])
     end;
 get_atom (X) ->
     X1 = string:strip(X),
@@ -1117,11 +1117,11 @@ update_from_n_node ( Parent_node, [Tok|OtherTok], Join, Agenda) ->
 %%     Data = {self(), state, State1},
 %%     Ser ! Data,
 %%     receive
-%% 	{ack, X} -> X;
-%% 	Other -> io:format (">> Invalid message = ~w\n", [Ser]),
-%% 		 throw ({badtransaction, Other})
+%%      {ack, X} -> X;
+%%      Other -> io:format (">> Invalid message = ~w\n", [Ser]),
+%%               throw ({badtransaction, Other})
 %%     after
-%% 	5000 -> throw ({timeout, Data})
+%%      5000 -> throw ({timeout, Data})
 %%     end.
 
 
@@ -1361,11 +1361,11 @@ join_right ({Fact, Sign}, [], Join_fun, PassedTok) ->
 join_right ({Fact, Sign}, [Tok| T], Join_fun, PassedTok) ->
     Pass = match (Fact, Tok, Join_fun),
     case Pass of
-	[] ->
-	    join_right ({Fact, Sign}, T, Join_fun, PassedTok);
-	New_tok ->
-	    L = lists:append(PassedTok, [{Pass, Sign}]),
-	    join_right ({Fact, Sign}, T, Join_fun, L)
+        [] ->
+            join_right ({Fact, Sign}, T, Join_fun, PassedTok);
+        New_tok ->
+            L = lists:append(PassedTok, [{Pass, Sign}]),
+            join_right ({Fact, Sign}, T, Join_fun, L)
     end.
 
 
@@ -1383,12 +1383,12 @@ refresh (N, Join) ->
 %% negativo o un nuovo token (Tok+Wme) in caso positivo
 match (Wme, Tok, Join_fun) ->
     case catch Join_fun(Wme, Tok) of
-	true ->
-	    lists:append(Tok, [Wme]);
-	{'EXIT',{function_clause,_}} ->
-	    [];
-	Other ->
-	    []
+        true ->
+            lists:append(Tok, [Wme]);
+        {'EXIT',{function_clause,_}} ->
+            [];
+        Other ->
+            []
     end.
 
 
@@ -1396,9 +1396,9 @@ append ([], {Fact, Sign}) ->
     [{[Fact], Sign}];
 append (Beta, {Fact, Sign}) ->
     lists:foldl(fun(Tok, New_Beta)->
-			Tok1 = lists:append(Tok, [Fact]),
-			lists:append(New_Beta, {Tok1, Sign})
-		end, [], Beta).
+                        Tok1 = lists:append(Tok, [Fact]),
+                        lists:append(New_Beta, {Tok1, Sign})
+                end, [], Beta).
 
 
 
@@ -1409,11 +1409,11 @@ make_join_node (J, {new, Tab}, Cond, P, Parent_node, Agenda) ->
 make_join_node (J, {old, Tab}, Cond, P, Parent_node, Agenda) ->
     Result = eresye_tree_list:child(Tab, Parent_node, J),
     case Result of
-	false ->
-	    Join_fun = evaluate(prepare_fun(Cond, P)),
-	    new_join(J, Tab, Join_fun, Parent_node, Agenda);
+        false ->
+            Join_fun = evaluate(prepare_fun(Cond, P)),
+            new_join(J, Tab, Join_fun, Parent_node, Agenda);
         Node ->
-	    {Node, J, Agenda}
+            {Node, J, Agenda}
     end.
 
 
@@ -1425,5 +1425,3 @@ new_join (J, Tab, Join_fun, Parent_node, Agenda) ->
     {J2, Agenda1} = update_new_node(Node, Parent_node, J1, Agenda),
     Node1 = eresye_tree_list:refresh(Node, J2),
     {Node1, J2, Agenda1}.
-
-
