@@ -35,51 +35,43 @@
 
 -module(ams).
 
--export([action/2, event/2, extends/0, pattern/2,
-         request_proc/4]).
-
 -export([de_register_agent/1, get_registered_agents/0,
          register_agent/1, start_link/0]).
 
--include("acl.hrl").
+-behaviour(simple_agent).
 
--include("fipa_ontology.hrl").
+-export([code_change/3, handle_acl/2, handle_call/3,
+         handle_cast/2, handle_info/2, init/2,
+         terminate/2]).
 
-extends() -> nil.
+-include_lib("exat/include/acl.hrl").
 
-pattern(Self, request) ->
-    [#aclmessage{speechact = 'REQUEST',
-                 ontology = "FIPA-Agent-Management",
-                 protocol = "fipa-request"}].
+-include_lib("exat/include/fipa_ontology.hrl").
 
-event(Self, request_event) -> {acl, request}.
+-record(state, {}).
 
-action(Self, start) -> [{request_event, request_proc}].
+handle_acl(#aclmessage{speechact = 'REQUEST',
+                       ontology = "FIPA-Agent-Management",
+                       protocol = "fipa-request"} = Message,
+           State) ->
+    lists:foreach(fun(Content) ->
+                          ContentReply = prepare_reply(Content),
+                          spawn(fun () -> acl:reply(Message, 'INFORM', ContentReply) end)
+                  end, Message#aclmessage.content),
 
-request_proc(Self, EventName, Message, ActionName) ->
-    %%io:format("Received msg ~w\n", [Message]),
-    Content = Message#aclmessage.content,
-    %%io:format("Received from ~w -> ~w\n",
-    %%           [Message#aclmessage.sender, Content]),
-    ContentReply = prepare_reply(Content),
-    %%io:format("Reply ~w~n", [ContentReply]),
-    acl:reply(Message, 'INFORM', ContentReply).
+    {noreply, State}.
 
-prepare_reply([Content = #action{'1' =
-                                     #'get-description'{}}]) ->
+prepare_reply(Content = #action{'1' = #'get-description'{}}) ->
     logger:log('AMS', "get-description"),
     APService = #'ap-service'{name =
                                   "fipa.mts.mtp.http.std",
                               type = "fipa.mts.mtp.http.std",
                               addresses = mtp:addresses()},
-    APDescription = #'ap-description'{name =
-                                          exat:current_platform(),
+    APDescription = #'ap-description'{'name' = exat:current_platform(),
                                       'ap-services' = [APService]},
-    Result = #result{'0' = Content, '1' = [APDescription]},
-    [Result];
-prepare_reply([Content = #action{'1' =
-                                     #search{'0' =
-                                                 #'ams-agent-description'{}}}]) ->
+    #result{'0' = Content, '1' = [APDescription]};
+
+prepare_reply(Content = #action{'1' = #search{'0' = #'ams-agent-description'{}}}) ->
     logger:log('AMS', "search ams-agent-description"),
     Agents = [#'agent-identifier'{name = X,
                                   addresses = mtp:addresses()}
@@ -88,45 +80,57 @@ prepare_reply([Content = #action{'1' =
                                              ownership = "NONE",
                                              state = "active"}
                     || X <- Agents],
-    %%io:format("DS ~w~n", [Descriptions]),
-    Result = #result{'0' = Content, '1' = Descriptions},
-    [Result].
+    #result{'0' = Content, '1' = Descriptions}.
 
 %%====================================================================
 %% Func: start_link/0
 %% Returns: {ok, Pid}.
 %%====================================================================
 start_link() ->
+    simple_agent:new(ams, ams, [{behaviour, ams}]).
+
+init(ams, Params) ->
     logger:start('AMS'),
     logger:log('AMS', "Staring AMS."),
     ontology_service:register_codec("FIPA-Agent-Management",
                                     fipa_ontology_sl_codec),
-    agent:new(ams, [{behaviour, ams}]),
-    [BehaviourObject] = agent:get_behaviour(ams),
-    Pid = object:executorof(BehaviourObject),
-    {ok, Pid}.
+    {ok, #state{}}.
+
+handle_call(Call, _From, State) ->
+    {reply, {error, unknown_call}, State}.
+
+handle_cast(_Call, State) ->
+    {reply, {error, unknown_cast}, State}.
+
+handle_info(Msg, State) ->
+    {noreply, State}.
+
+code_change(_, _, _) -> erlang:error(notimp).
+
+terminate(_Reason, _State) ->
+    ok.
 
 %%====================================================================
 %% Func: register_agent/1
 %% Returns: ok.
 %%====================================================================
 register_agent(AgentName) ->
-    eresye:assert(agent_registry, {agent, AgentName}).
+    seresye:assert(agent_registry, {agent, AgentName}).
 
 %%====================================================================
 %% Func: de_register_agent/1
 %% Returns: ok.
 %%====================================================================
 de_register_agent(AgentName) ->
-    eresye:retract(agent_registry, {agent, AgentName}).
+    seresye:retract(agent_registry, {agent, AgentName}).
 
 %%====================================================================
 %% Func: get_registered_agents/0
 %% Returns: [string()].
 %%====================================================================
 get_registered_agents() ->
-    AgentList = eresye:query_kb(agent_registry,
-                                {agent, '_'}),
+    AgentList = seresye:query_kb(agent_registry,
+                                 {agent, '_'}),
     AgentLocalNames = [X || {_, X} <- AgentList],
     PlatformName = exat:current_platform(),
     [lists:flatten([atom_to_list(X), "@", PlatformName])

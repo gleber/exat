@@ -1,4 +1,6 @@
-all:
+all: deps fast
+
+fast:
 	./rebar compile
 
 deps:

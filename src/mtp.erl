@@ -62,8 +62,8 @@ http(Port) ->
     MTPAddress = lists:flatten(["http://",
                                 HostEnt#hostent.h_name, ":",
                                 integer_to_list(Port), "/acc"]),
-    eresye:assert(agent_registry,
-                  {mtp_address, MTPAddress}),
+    seresye:assert(agent_registry,
+                   {mtp_address, MTPAddress}),
     misultin:start_link([{port, Port},
                          {loop, fun handle_http/1}]).
 
@@ -71,8 +71,8 @@ http(Port) ->
 %% Func: addresses/0
 %%====================================================================
 addresses() ->
-    MTPAddress = eresye:query_kb(agent_registry,
-                                 {mtp_address, '_'}),
+    MTPAddress = seresye:query_kb(agent_registry,
+                                  {mtp_address, '_'}),
     [X || {_, X} <- MTPAddress].
 
 %%====================================================================

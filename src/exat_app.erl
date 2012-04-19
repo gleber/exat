@@ -52,8 +52,7 @@
 %%====================================================================
 
 start() ->
-    application:start(inets,
-                      permanent),  % FIXME! Use ".rel"
+    application:start(inets, permanent),  % FIXME! Use ".rel"
     application:start(exat, permanent),
     case init:get_argument(start) of
         {ok, [[List]]} ->

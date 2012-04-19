@@ -54,10 +54,9 @@ new(AgentName, Callback) ->
     new(AgentName, Callback, []).
 
 new(AgentName, Callback, Parameters) ->
-    {ok, _} = gen_server:start({local, AgentName},
-                               simple_agent, [AgentName, Callback, Parameters],
-                               []),
-    ok.
+    gen_server:start({local, AgentName},
+                     simple_agent, [AgentName, Callback, Parameters],
+                     []).
 
 %%
 %% MAIN CALLS
@@ -94,9 +93,8 @@ init(Args) ->
     [AgentName, Callback, Parameters | _] = Args,
     ams:register_agent(AgentName),
     {ok, IntState} = Callback:init(AgentName, Parameters),
-    {ok,
-     #state{name = AgentName, callback = Callback,
-            int_state = IntState}}.
+    {ok, #state{name = AgentName, callback = Callback,
+                int_state = IntState}}.
 
 %%
 %% Terminate

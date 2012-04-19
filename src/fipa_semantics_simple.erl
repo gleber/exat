@@ -36,5 +36,5 @@ is_feasible(Self, Agent, KB,
 rational_effect(Self, Agent, KB,
                 AclMessage = #aclmessage{speechact = 'INFORM'}) ->
     %%io:format ("[Agent: ~w] Performing RE on ~p\n", [Agent, AclMessage]),
-    eresye:assert(KB, AclMessage#aclmessage.content),
+    seresye:assert(KB, AclMessage#aclmessage.content),
     true.

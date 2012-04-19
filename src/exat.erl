@@ -58,7 +58,8 @@
 %%          {ok, Pid, State} |
 %%          {error, Reason}
 %%====================================================================
-start(Type, StartArgs) -> exat_sup:start_link().
+start(Type, StartArgs) -> 
+    exat_sup:start_link().
 
 %%====================================================================
 %% Func: stop/1

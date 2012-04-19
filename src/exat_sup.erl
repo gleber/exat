@@ -76,7 +76,7 @@ init([]) ->
         {ok, [[ThePort]]} -> Port = list_to_integer(ThePort);
         _ -> Port = (?DEFAULT_PORT)
     end,
-    eresye:start(agent_registry),
+    {ok, Pid} = seresye:start(agent_registry),
     MTP = {exat_platform, {exat_server, start_link, [Port]},
            permanent, brutal_kill, supervisor, [exat_server]},
     MTP_SENDER = {mtp_sender_service,
@@ -89,5 +89,9 @@ init([]) ->
             {gen_server, start_link,
              [{local, ontology_service}, ontology_service, [], []]},
             permanent, brutal_kill, worker, [ontology_service]},
-    ExatChildSpec = [MTP, MTP_SENDER, ONTO, AMS],
+    ExatChildSpec = [MTP, 
+                     MTP_SENDER, 
+                     ONTO, 
+                     AMS
+                    ],
     {ok, {{one_for_all, 5, 20}, ExatChildSpec}}.
