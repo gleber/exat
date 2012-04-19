@@ -1,5 +1,5 @@
 %%
-%% simple_agent.erl
+%% agent.erl
 %%
 %% ----------------------------------------------------------------------
 %%
@@ -19,7 +19,7 @@
 %%  You should have received a copy of the GNU General Public License
 %%  along with this program.  If not, see <http://www.gnu.org/licenses/>
 
--module(simple_agent).
+-module(agent).
 
 -behaviour(gen_server).
 
@@ -55,7 +55,7 @@ new(AgentName, Callback) ->
 
 new(AgentName, Callback, Parameters) ->
     gen_server:start({local, AgentName},
-                     simple_agent, [AgentName, Callback, Parameters],
+                     agent, [AgentName, Callback, Parameters],
                      []).
 
 %%
@@ -77,7 +77,7 @@ get_mind(_Pid) -> erlang:error(notimpl).
 get_acl_semantics(_Pid) -> erlang:error(notimpl).
 
 stop(Agent) ->
-    gen_server:cast(Agent, '$simple_agent_stop').
+    gen_server:cast(Agent, '$agent_stop').
 
 kill(Agent) -> stop(Agent).
 
@@ -155,7 +155,7 @@ handle_call(Call, From,
 %% Stops the agent process
 %%
 
-handle_cast('$simple_agent_stop', State) ->
+handle_cast('$agent_stop', State) ->
     {stop, normal, State};
 handle_cast(Cast,
             #state{int_state = IntState, callback = Callback} =

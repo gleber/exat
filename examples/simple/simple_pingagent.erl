@@ -1,6 +1,6 @@
 -module(simple_pingagent).
 
--behaviour(simple_agent).
+-behaviour(agent).
 
 -export([start/0, stop/0]). % API
 
@@ -13,9 +13,9 @@
 
 %%API
 
-start() -> simple_agent:new(pingagent, ?MODULE, []).
+start() -> agent:new(pingagent, ?MODULE, []).
 
-stop() -> simple_agent:stop(pingagent).
+stop() -> agent:stop(pingagent).
 
 %%agents callback
 

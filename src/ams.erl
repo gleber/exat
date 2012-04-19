@@ -38,7 +38,7 @@
 -export([de_register_agent/1, get_registered_agents/0,
          register_agent/1, start_link/0]).
 
--behaviour(simple_agent).
+-behaviour(agent).
 
 -export([code_change/3, handle_acl/2, handle_call/3,
          handle_cast/2, handle_info/2, init/2,
@@ -87,7 +87,7 @@ prepare_reply(Content = #action{'1' = #search{'0' = #'ams-agent-description'{}}}
 %% Returns: {ok, Pid}.
 %%====================================================================
 start_link() ->
-    simple_agent:new(ams, ams, [{behaviour, ams}]).
+    agent:new(ams, ams, [{behaviour, ams}]).
 
 init(ams, Params) ->
     logger:start('AMS'),

@@ -1,6 +1,6 @@
 -module(simple_pingeragent).
 
--behaviour(simple_agent).
+-behaviour(agent).
 
 -export([start/0, stop/0]). % API
 
@@ -14,10 +14,10 @@
 %%API
 
 start() ->
-    simple_agent:new(pingeragent, ?MODULE,
-                     [{"localhost", 7778, "pingagent"}]).
+    agent:new(pingeragent, ?MODULE,
+              [{"localhost", 7778, "pingagent"}]).
 
-stop() -> simple_agent:stop(pingeragent).
+stop() -> agent:stop(pingeragent).
 
 %%agents callback
 handle_acl(#aclmessage{speechact = 'INFORM',

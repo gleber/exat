@@ -2,7 +2,7 @@
 
 -export([start/0]).
 
--behaviour(simple_agent).
+-behaviour(agent).
 
 -export([code_change/3, handle_acl/2, handle_call/3,
          handle_cast/2, handle_info/2, init/2,
@@ -15,7 +15,7 @@
 -record(state, {name}).
 
 start() ->
-    simple_agent:new(the_exat_agent, the_exat_agent, [{behaviour, exat_agent}]).
+    agent:new(the_exat_agent, the_exat_agent, [{behaviour, exat_agent}]).
 
 handle_acl(#aclmessage{speechact = 'REQUEST'} = Message, #state{self = Self} = State) ->
     io:format("[Agent:~w] Request received from agent ~p\n",
