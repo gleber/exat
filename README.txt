@@ -4,7 +4,16 @@ eXAT
 This is an authorized fork of original eXAT created by Corrado Santoro and
 Francesca Gandemi.
 
-eXAT Release 1.3 "EYE"
+Version 1.5.0 has the following big changes in comparison to original
+eXAT:
+- internal http server has been replaced with Misultin (which in turn
+  will be replaced with Cowboy or Mochiweb, since it got discontinued )
+- Eresye has been replaced with Seresye
+- agent.erl has been replaced with much simpler implementation
+  closely following OTP standards
+- object.erl, multisync.erl and all OOP-like stuff has been dropped
+
+eXAT Release 1.5.0
 ======================
 
 
@@ -35,4 +44,4 @@ eXAT Release 1.3 "EYE"
    $ ./run_second.sh
 
    Now you'll see, in simple_pingerpinger shell, that he can receive
-messages from simple_pingagent.
+   messages from simple_pingagent.
