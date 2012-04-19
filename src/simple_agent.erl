@@ -180,10 +180,3 @@ code_change(OldVsn,
     {ok, IntState2} = Callback:code_change(OldVsn, IntState,
                                            Extra),
     {ok, State#state{int_state = IntState2}}.
-
-%% extract_agent_identifier(AgentOrObject) when record(AgentOrObject, 'agent-identifier') ->
-%%     AgentOrObject#'agent-identifier'.name;
-%% extract_agent_identifier(AgentOrObject) when record(AgentOrObject, object) ->
-%%     extract_agent_identifier(object:agentof(AgentOrObject));
-%% extract_agent_identifier(AgentOrObject) ->
-%%     AgentOrObject.

@@ -25,14 +25,11 @@
 -export([accept_proposal/1, ask_if/1,
          call_for_proposal/1, ensure_list/1, erlang_to_sl0/1,
          hexlify/1, inform/1, parse_message/1, propose/1,
-         query_if/1, query_ref/1, refinepattern/2,
-         refinepattern/4, refuse/1, reject_proposal/1, reply/3,
+         query_if/1, query_ref/1, refuse/1, reject_proposal/1, reply/3,
          request/1, sendacl/1, sl0_getcontent/1, sl0_getslot/2,
          sl0_parse/1, sl0_parsecontent/1, unhexlify/1]).
 
 -author('csanto@diit.unict.it').
-
--include("object.hrl").
 
 -include("acl.hrl").
 
@@ -146,10 +143,6 @@ ensure_list(X) -> to_list(X).
 
 %% if the ID is an object, get the associated agent
 encode_agent_identifier(Identifier)
-  when is_record(Identifier, object) ->
-    encode_agent_identifier(object:agentof(Identifier));
-%% if the ID is an atom (i.e. agent/process name), transform it into a string
-encode_agent_identifier(Identifier)
   when is_atom(Identifier) ->
     encode_agent_identifier(atom_to_list(Identifier));
 %% if the ID is a string, transform it into a #agent-identifier
@@ -240,38 +233,6 @@ reply(Request, NewSpeechAct, NewContent) ->
                                'in-reply-to' = Request#aclmessage.'reply-with',
                                content = NewContent}).
 
-%%
-%% pattern library
-%%
-unify_atoms(?ACL_ANY, ?ACL_ANY) -> ?ACL_ANY;
-unify_atoms(A1, ?ACL_ANY) -> A1;
-unify_atoms(?ACL_ANY, A2) -> A2;
-unify_atoms(A1, A2) -> A2.
-
-unify_patterns([], [], Acc) -> lists:reverse(Acc);
-unify_patterns([H1 | T1], [H2 | T2], Acc) ->
-    unify_patterns(T1, T2, [unify_atoms(H1, H2) | Acc]).
-
-refinepattern(BasePattern, RefiningPattern) ->
-    LBasePattern = tuple_to_list(BasePattern),
-    LRefiningPattern = tuple_to_list(RefiningPattern),
-    L1 = length(LBasePattern),
-    L2 = length(LRefiningPattern),
-    if L1 =/= L2 ->
-            exit({badarg, 'pattern lengths differ'});
-       true ->
-            list_to_tuple(unify_patterns(LBasePattern,
-                                         LRefiningPattern, []))
-    end.
-
-refinepattern(Object, PatternName, Index,
-              RefiningPattern) ->
-    PatternList = object:super(Object, pattern,
-                               [PatternName]),
-    lists:sublist(PatternList, Index - 1) ++
-        [refinepattern(lists:nth(Index, PatternList),
-                       RefiningPattern)]
-        ++ lists:nthtail(Index, PatternList).
 
 %%
 %% acl utils

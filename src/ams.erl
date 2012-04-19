@@ -105,7 +105,7 @@ handle_cast(_Call, State) ->
 handle_info(Msg, State) ->
     {noreply, State}.
 
-code_change(_, _, _) -> erlang:error(notimp).
+code_change(OldVsn, State, Extra) -> {ok, State}.
 
 terminate(_Reason, _State) ->
     ok.

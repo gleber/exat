@@ -1,39 +1,49 @@
 -module(exat_agent).
 
--export([extends/0]).
+-export([start/0]).
 
--export([action/2, do_request/4, event/2, on_starting/1,
-         pattern/2, start/0]).
+-behaviour(simple_agent).
+
+-export([code_change/3, handle_acl/2, handle_call/3,
+         handle_cast/2, handle_info/2, init/2,
+         terminate/2]).
 
 -include_lib("exat/include/acl.hrl").
 
 -include_lib("exat/include/fipa_ontology.hrl").
 
-extends() -> nil.
+-record(state, {name}).
 
-pattern(Self, request) ->
-    [#aclmessage{speechact = 'REQUEST'}].
+start() ->
+    simple_agent:new(the_exat_agent, the_exat_agent, [{behaviour, exat_agent}]).
 
-event(Self, evt_request) -> {acl, request}.
+handle_acl(#aclmessage{speechact = 'REQUEST'} = Message, #state{self = Self} = State) ->
+    io:format("[Agent:~w] Request received from agent ~p\n",
+              [Self, Message#aclmessage.sender]),
+    
+    {noreply, State}.
 
-action(Self, start) -> {evt_request, do_request}.
+init(the_exat_agent, Params) ->
+    acl:sendacl(#aclmessage{speechact = 'REQUEST',
+                            content = "ping", sender = Self,
+                            receiver = fellow_agent()}),
+    {ok, #state{self = the_exat_agent}}.
+
+handle_call(Call, _From, State) ->
+    {reply, {error, unknown_call}, State}.
+
+handle_cast(_Call, State) ->
+    {reply, {error, unknown_cast}, State}.
+
+handle_info(Msg, State) ->
+    {noreply, State}.
+
+code_change(OldVsn, State, Extra) -> {ok, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
 
 fellow_agent() ->
     #'agent-identifier'{name = "jadeagent@jadeplatform",
                         addresses = ["http://localhost:7778/acc"]}.
-
-on_starting(Self) ->
-    io:format("[Agent:~w] Starting\n",
-              [object:agentof(Self)]),
-    acl:sendacl(#aclmessage{speechact = 'REQUEST',
-                            content = "ping", sender = Self,
-                            receiver = fellow_agent()}).
-
-do_request(Self, EventName, Message, ActionName) ->
-    io:format("[Agent:~w] Request received from agent "
-              "~p\n",
-              [object:agentof(Self), Message#aclmessage.sender]),
-    object:do(Self, start).
-
-start() ->
-    agent:new(the_exat_agent, [{behaviour, exat_agent}]).

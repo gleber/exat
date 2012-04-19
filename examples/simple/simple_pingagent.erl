@@ -42,6 +42,6 @@ handle_cast(_Call, State) -> {noreply, State}.
 
 handle_info(Msg, State) -> {noreply, State}.
 
-code_change(_, _, _) -> ok.
+code_change(_, State, _) -> {ok, State}.
 
 terminate(_, _) -> ok.
