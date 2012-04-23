@@ -89,7 +89,6 @@ kill(Agent) -> stop(Agent).
 %% Initialize
 %%
 init(Args) ->
-    process_flag(trap_exit, true),
     [AgentName, Callback, Parameters | _] = Args,
     ams:register_agent(AgentName),
     {ok, IntState} = Callback:init(AgentName, Parameters),
