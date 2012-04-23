@@ -76,7 +76,7 @@ init([]) ->
         {ok, [[ThePort]]} -> Port = list_to_integer(ThePort);
         _ -> Port = (?DEFAULT_PORT)
     end,
-    {ok, Pid} = seresye:start(agent_registry),
+    {ok, _Pid} = seresye:start(agent_registry),
     MTP = {exat_platform, {exat_server, start_link, [Port]},
            permanent, brutal_kill, supervisor, [exat_server]},
     MTP_SENDER = {mtp_sender_service,

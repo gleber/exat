@@ -83,6 +83,6 @@ substitute(L, Pred, New) ->
     case catch erl_eval:exprs(Expr, erl_eval:new_bindings())
     of
         {'EXIT', _} -> false;
-        {value, Value, Bindings} -> Value;
+        {value, Value, _Bindings} -> Value;
         _ -> false
     end.

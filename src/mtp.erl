@@ -83,7 +83,7 @@ handle_http(Req) ->
                   Req:resource([lowercase, urldecode]), Req:get(headers),
                   Req).
 
-http_mtp_post('POST', Url, Headers, Req) ->
+http_mtp_post('POST', _Url, _Headers, Req) ->
     %%io:format ("URL = ~s~n", [Url]),
     %%display_params (Headers),
     Content = Req:parse_post(),
@@ -93,11 +93,11 @@ http_mtp_post('POST', Url, Headers, Req) ->
                               || V2 <- Content, http_mtp_post_2(V2)],
     http_mtp_decode(Req, XmlContent, SLContent).
 
-http_mtp_post_1({part, H, D}) ->
+http_mtp_post_1({part, H, _D}) ->
     "application/xml" ==
         misultin_utility:header_get_value('Content-Type', H).
 
-http_mtp_post_2({part, H, D}) ->
+http_mtp_post_2({part, H, _D}) ->
     "application/text" ==
         misultin_utility:header_get_value('Content-Type', H).
 
@@ -220,10 +220,10 @@ http_mtp_encode_and_send(To, From, Message) ->
     {ok, RequestID} = HTTPID,
     Result = RequestID,
     %%io:format ("Result ~p, ~p~n", [self (), Result]),
-    {StatusLine, ReceivedHeaders, ReceivedBody} = Result,
+    {StatusLine, _ReceivedHeaders, _ReceivedBody} = Result,
     %%io:format ("Status ~w,~s~n", [StatusCode, ReasonPhrase]),
     %%io:format ("Body ~s~n", [ReceivedBody]).
-    {HttpVersion, StatusCode, ReasonPhrase} = StatusLine.
+    {_HttpVersion, _StatusCode, _ReasonPhrase} = StatusLine.
 
 %%====================================================================
 %% Func: init/1
@@ -233,7 +233,7 @@ init(_) -> {ok, []}.
 %%====================================================================
 %% Func: handle_call/3
 %%====================================================================
-handle_call({http_post, Request}, From, State) ->
+handle_call({http_post, Request}, _From, State) ->
     HTTPID = httpc:request(post, Request, [],
                            [{sync, true}]),
     {reply, HTTPID, State}.
@@ -246,4 +246,4 @@ terminate(_, _) -> ok.
 %%====================================================================
 %% Func: code_change/3
 %%====================================================================
-code_change(OldVsn, State, Extra) -> {ok, State}.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.

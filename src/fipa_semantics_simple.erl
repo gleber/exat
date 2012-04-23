@@ -28,13 +28,11 @@
 
 extends() -> semantics.
 
-is_feasible(Self, Agent, KB,
-            AclMessage = #aclmessage{speechact = 'INFORM'}) ->
+is_feasible(_Self, _Agent, _KB, #aclmessage{speechact = 'INFORM'}) ->
     %%io:format ("[Agent: ~w] Doing FP test on ~w\n", [Agent, AclMessage]),
     true.
 
-rational_effect(Self, Agent, KB,
-                AclMessage = #aclmessage{speechact = 'INFORM'}) ->
+rational_effect(_Self, _Agent, KB, AclMessage = #aclmessage{speechact = 'INFORM'}) ->
     %%io:format ("[Agent: ~w] Performing RE on ~p\n", [Agent, AclMessage]),
     seresye:assert(KB, AclMessage#aclmessage.content),
     true.

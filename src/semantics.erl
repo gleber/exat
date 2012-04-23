@@ -22,17 +22,15 @@
 %%
 -module(semantics).
 
--export([extends/0, is_feasible/4, rational_effect/4,
+-export([is_feasible/4, rational_effect/4,
          semantics/1, semantics_/1]).
 
 -include("acl.hrl").
 
-extends() -> nil.
+semantics(_Self) -> nil.
 
-semantics(Self) -> nil.
+semantics_(_Self) -> nil.
 
-semantics_(Self) -> nil.
+is_feasible(_Self, _Agent, _KB, _AclMessage) -> true.
 
-is_feasible(Self, Agent, KB, AclMessage) -> true.
-
-rational_effect(Self, Agent, KB, AclMessage) -> true.
+rational_effect(_Self, _Agent, _KB, _AclMessage) -> true.

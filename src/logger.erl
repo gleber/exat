@@ -99,10 +99,10 @@ handle_info(Info, State) ->
 %% Func: terminate/2
 %% Returns: ok
 %%====================================================================
-terminate(Args, State) -> ok.
+terminate(_Args, _State) -> ok.
 
 %%====================================================================
 %% Func: code_change/3
 %% Returns: {ok, NewState}
 %%====================================================================
-code_change(OldVsn, State, _) -> {ok, State}.
+code_change(_OldVsn, State, _) -> {ok, State}.

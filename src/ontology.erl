@@ -108,8 +108,8 @@ compile_lines(Accumulator, OntoName,
 compile_lines(Accumulator, OntoName,
               [{attribute, _, ontology, OntoName} | Tail]) ->
     compile_lines(Accumulator, OntoName, Tail);
-compile_lines(Accumulator, OntoName,
-              [{attribute, Line, ontology, _} | Tail]) ->
+compile_lines(_Accumulator, _OntoName,
+              [{attribute, Line, ontology, _} | _Tail]) ->
     {error,
      {"ontology name does not match with filename "
       "in line",
@@ -120,8 +120,8 @@ compile_lines(Accumulator, OntoName,
 compile_lines(Accumulator, OntoName,
               [{eof, _} | Tail]) ->
     compile_lines(Accumulator, OntoName, Tail);
-compile_lines(Accumulator, _,
-              [{_, Line, _, _} | Tail]) ->
+compile_lines(_Accumulator, _,
+              [{_, Line, _, _} | _Tail]) ->
     {error, {"syntax error in line", Line}}.
 
 %%====================================================================
@@ -140,18 +140,18 @@ compile_clauses(Acc, [H | T]) ->
 %%              given its erlang abstract form
 %% Returns: #ontology_class
 %%====================================================================
-compile_clause({clause, LineNum, [{atom, _, ClassName}],
+compile_clause({clause, _LineNum, [{atom, _, ClassName}],
                 [], [{tuple, _, ClassDef}]}) ->
     #ontology_class{name = ClassName, superclass = nil,
                     properties =
                         compile_properties([], ClassName, ClassDef)};
-compile_clause({clause, LineNum, [{atom, _, ClassName}],
+compile_clause({clause, _LineNum, [{atom, _, ClassName}],
                 [],
                 [{call, _, {atom, _, is_a},
                   [{atom, _, SuperClass}]}]}) ->
     #ontology_class{name = ClassName,
                     superclass = SuperClass, properties = []};
-compile_clause({clause, LineNum, [{atom, _, ClassName}],
+compile_clause({clause, _LineNum, [{atom, _, ClassName}],
                 [],
                 [{call, _, {atom, _, is_a}, [{atom, _, SuperClass}]},
                  {tuple, _, ClassDef}]}) ->
@@ -178,7 +178,7 @@ compile_properties(Acc, ClassName, [H | T]) ->
 %%              given the erlang abstract form
 %% Returns: #ontology_property
 %%====================================================================
-compile_property(ClassName,
+compile_property(_ClassName,
                  {match, _, {atom, _, FieldName}, FieldDef}) ->
     L = cons_to_erl_list(FieldDef),
     %%io:format ("~p~n", [L]),
@@ -193,7 +193,7 @@ compile_property(ClassName,
 %% Description: transforms a "cons" abstract erlang construct to a list
 %% Returns: [term()]
 %%====================================================================
-cons_to_erl_list({cons, Line, OP1, OP2}) ->
+cons_to_erl_list({cons, _Line, OP1, OP2}) ->
     [cons_decode(OP1) | cons_to_erl_list(OP2)];
 cons_to_erl_list(X) -> [cons_decode(X)].
 
@@ -289,7 +289,7 @@ override_property(Acc, [],
                   NewProperty = #ontology_property{}) ->
     lists:reverse([NewProperty | Acc]);
 override_property(Acc,
-                  [P = #ontology_property{name = N} | T],
+                  [#ontology_property{name = N} | T],
                   NewProperty = #ontology_property{name = N}) ->
     override_property([NewProperty | Acc], T, nil);
 override_property(Acc, [P | T], NewProperty) ->
@@ -300,9 +300,9 @@ override_property(Acc, [P | T], NewProperty) ->
 %% Description: Searches for a class in the list
 %% Returns: #ontology_class
 %%====================================================================
-get_class(ClassName, []) -> nil;
+get_class(_ClassName, []) -> nil;
 get_class(ClassName,
-          [Class = #ontology_class{name = ClassName} | T]) ->
+          [Class = #ontology_class{name = ClassName} | _T]) ->
     Class;
 get_class(ClassName, [_ | T]) ->
     get_class(ClassName, T).
@@ -320,7 +320,7 @@ generate_hierarchy_tree(Acc, [Class | T], Classes) ->
                            Classes)},
     generate_hierarchy_tree([Item | Acc], T, Classes).
 
-ancestors_list(Acc, nil, Classes) -> lists:reverse(Acc);
+ancestors_list(Acc, nil, _Classes) -> lists:reverse(Acc);
 ancestors_list(Acc, X, Classes) ->
     C = get_class(X, Classes),
     ancestors_list([X | Acc], C#ontology_class.superclass,
@@ -453,7 +453,7 @@ generate_childof(Acc,
 generate_is_a(Acc, []) ->
     lists:flatten(lists:reverse(["is_a (_,_) -> false.\n\n"
                                  | Acc]));
-generate_is_a(Acc, [{ClassName, []} | T]) ->
+generate_is_a(Acc, [{_ClassName, []} | T]) ->
     generate_is_a(Acc, T);
 generate_is_a(Acc, [{ClassName, Ancestors} | T]) ->
     Line =
@@ -483,7 +483,7 @@ generate_is_class(Acc, [{ClassName, _} | T]) ->
 %%====================================================================
 generate_cast({Acc1, Acc2}, [], _) ->
     {lists:reverse(Acc1), lists:reverse(Acc2)};
-generate_cast({Acc1, Acc2}, [{ClassName, []} | T],
+generate_cast({Acc1, Acc2}, [{_ClassName, []} | T],
               ResolvedClasses) ->
     generate_cast({Acc1, Acc2}, T, ResolvedClasses);
 generate_cast({Acc1, Acc2}, [{ClassName, Children} | T],
@@ -742,37 +742,37 @@ generate_sl_decoder_lines(Acc, ClassName,
                                          Property#ontology_property.is_digit)]),
     generate_sl_decoder_lines([Line | Acc], ClassName, T).
 
-sl_decode_term(ClassName, FieldName, {set_of, _}, false,
+sl_decode_term(_ClassName, FieldName, {set_of, _}, false,
                false) ->
     lists:flatten(io_lib:format("'~s' = decode (set_of (sl:get_slot ('~s', "
                                 "T)))",
                                 [FieldName, FieldName]));
-sl_decode_term(ClassName, FieldName, {set_of, _}, true,
+sl_decode_term(_ClassName, FieldName, {set_of, _}, true,
                false) ->
     lists:flatten(io_lib:format("'~s' = set_of (sl:get_slot ('~s', T))",
                                 [FieldName, FieldName]));
-sl_decode_term(ClassName, FieldName, {sequence_of, _},
+sl_decode_term(_ClassName, FieldName, {sequence_of, _},
                false, false) ->
     lists:flatten(io_lib:format("'~s' = decode (sequence_of (sl:get_slot "
                                 "('~s', T)))",
                                 [FieldName, FieldName]));
-sl_decode_term(ClassName, FieldName, {sequence_of, _},
+sl_decode_term(_ClassName, FieldName, {sequence_of, _},
                true, false) ->
     lists:flatten(io_lib:format("'~s' = sequence_of (sl:get_slot ('~s', "
                                 "T))",
                                 [FieldName, FieldName]));
-sl_decode_term(ClassName, FieldName, _, false, false) ->
+sl_decode_term(_ClassName, FieldName, _, false, false) ->
     lists:flatten(io_lib:format("'~s' = decode (sl:get_slot ('~s', T))",
                                 [FieldName, FieldName]));
-sl_decode_term(ClassName, FieldName, FieldType, true,
+sl_decode_term(_ClassName, FieldName, FieldType, true,
                false) ->
     lists:flatten(io_lib:format("'~s' = ontology:sl_decode_term (sl:get_slot "
                                 "('~s', T), ~s)",
                                 [FieldName, FieldName, FieldType]));
-sl_decode_term(ClassName, FieldName, _, false, true) ->
+sl_decode_term(_ClassName, FieldName, _, false, true) ->
     lists:flatten(io_lib:format("'~s' = decode (lists:nth (~w, T))",
                                 [FieldName, digit_of(FieldName) + 1]));
-sl_decode_term(ClassName, FieldName, FieldType, true,
+sl_decode_term(_ClassName, FieldName, FieldType, true,
                true) ->
     lists:flatten(io_lib:format("'~s' = ontology:sl_decode_term (lists:nth "
                                 "(~w,T), ~w)",

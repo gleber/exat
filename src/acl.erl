@@ -50,7 +50,7 @@ erl_to_sl0([Head | Tail], Acc) ->
                true -> Head
             end,
     erl_to_sl0(Tail, [" ", ZHead | Acc]);
-erl_to_sl0(Value, Acc) when is_atom(Value) ->
+erl_to_sl0(Value, _Acc) when is_atom(Value) ->
     atom_to_list(Value).
 
 %%%
@@ -69,9 +69,9 @@ sl0_parse(M) ->
 
 %% returns {error, ErrorCond} or {ok, Terms}
 
-sl0_getslot(SearchedSlotname, []) -> ?ACL_ANY;
+sl0_getslot(_SearchedSlotname, []) -> ?ACL_ANY;
 sl0_getslot(SearchedSlotname,
-            [{SlotName, SlotValue} | MessageTail])
+            [{SlotName, SlotValue} | _MessageTail])
   when SlotName == SearchedSlotname ->
     SlotValue;
 sl0_getslot(SearchedSlotname, [_ | MessageTail]) ->
@@ -120,8 +120,7 @@ translate_agent_identifier(ID = ['agent-identifier'
 translate_agent_identifier(ID) -> ID.
 
 translate_receiver_agent_identifier([set | Set]) ->
-    FIPA_ID_Set = [sl_to_erlang_agent_identifier(X)
-                   || X <- Set];
+    [sl_to_erlang_agent_identifier(X) || X <- Set];
 translate_receiver_agent_identifier(ID) ->
     translate_agent_identifier(ID).
 

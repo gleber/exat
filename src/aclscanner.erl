@@ -38,19 +38,19 @@ skiptoquote([H | T], Acc) -> skiptoquote(T, Acc ++ [H]).
 scan([], L) -> accumulate(L);
 scan([32], L) -> accumulate(L);
 scan([$(], L) ->
-    [Tokens, Acc] = accumulate(L), [Tokens ++ ["("], []];
+    [Tokens, _Acc] = accumulate(L), [Tokens ++ ["("], []];
 scan([$)], L) ->
-    [Tokens, Acc] = accumulate(L), [Tokens ++ [")"], []];
+    [Tokens, _Acc] = accumulate(L), [Tokens ++ [")"], []];
 scan([L], L2) ->
     [Tokens, Acc] = L2, [Tokens ++ [Acc ++ [L]], []];
 scan([$( | T], L) ->
-    [Tokens, Acc] = accumulate(L),
+    [Tokens, _Acc] = accumulate(L),
     scan(T, [Tokens ++ ["("], []]);
 scan([$) | T], L) ->
-    [Tokens, Acc] = accumulate(L),
+    [Tokens, _Acc] = accumulate(L),
     scan(T, [Tokens ++ [")"], []]);
 scan([$\s, $: | T], L) ->
-    [Tokens, Acc] = accumulate(L),
+    [Tokens, _Acc] = accumulate(L),
     scan(T, [Tokens ++ [":"], []]);
 %%scan ([$ |T], L) ->
 %% [Tokens, Acc] = accumulate (L),
@@ -60,14 +60,14 @@ scan([H | T], L) ->
     case H of
         32 -> L2 = accumulate(L), T2 = T;
         34 ->
-            [Tokens2, Acc2] = accumulate(L),
+            [Tokens2, _Acc2] = accumulate(L),
             [H2, T2] = skiptoquote(T, []),
             L2 = [Tokens2 ++ [H2], []];
-        Other -> L2 = [Tokens, Acc ++ [H]], T2 = T
+        _ -> L2 = [Tokens, Acc ++ [H]], T2 = T
     end,
     scan(T2, L2).
 
-scan(P) -> [Tokens, Acc] = scan(P, [[], []]), Tokens.
+scan(P) -> [Tokens, _Acc] = scan(P, [[], []]), Tokens.
 
 token(X) ->
     case X of
@@ -75,7 +75,7 @@ token(X) ->
         [$)] -> {')', 1};
         [$:] -> {':', 1};
         [$\s] -> {' ', 1};
-        Other -> {atom, list_to_atom(X), 1}
+        _ -> {atom, list_to_atom(X), 1}
     end.
 
 tokenize([L]) -> [token(L), {'$end', 1}];

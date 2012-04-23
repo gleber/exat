@@ -25,7 +25,7 @@
 
 -export([scan/1]).
 
-scan([], Acc, Tokens) -> lists:reverse(Tokens);
+scan([], _Acc, Tokens) -> lists:reverse(Tokens);
 scan([$( | L], [], Tokens) ->
     scan(L, [], ["(" | Tokens]);
 scan([$( | L], Acc, Tokens) ->

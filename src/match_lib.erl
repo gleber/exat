@@ -36,8 +36,8 @@ match_atoms(Atom1, Atom2) ->
 %%matches lists
 match_lists([], []) -> true;
 match_lists([L1], [L2]) -> match_atoms(L1, L2);
-match_lists([L], [H | T]) -> false;
-match_lists([H | T], [L]) -> false;
+match_lists([_L], [_H | _T]) -> false;
+match_lists([_H | _T], [_L]) -> false;
 match_lists([H1 | T1], [H2 | T2]) ->
     X = match_atoms(H1, H2),
     if X -> match_lists(T1, T2);
@@ -59,7 +59,7 @@ match_all(Fact1, Fact2) ->
 %%example:
 %% match_lib:match_acl ({aclmessage,infom,nil,..,..,..,..}).
 %%
-match_acl([], Data) -> false;
+match_acl([], _Data) -> false;
 match_acl([Clause | Clauses], Data) ->
     Match = match_all(Clause, Data),
     if Match -> true;

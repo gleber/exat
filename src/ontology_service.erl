@@ -104,4 +104,4 @@ terminate(_, _) -> ok.
 %%====================================================================
 %% Function: code_change/3
 %%====================================================================
-code_change(OldVsn, State, Extra) -> {ok, State}.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.
