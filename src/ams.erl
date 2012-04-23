@@ -89,23 +89,33 @@ prepare_reply(Content = #action{'1' = #search{'0' = #'ams-agent-description'{}}}
 start_link() ->
     agent:new(ams, ams, [{behaviour, ams}]).
 
-init(ams, Params) ->
+init(ams, _Params) ->
     logger:start('AMS'),
     logger:log('AMS', "Staring AMS."),
     ontology_service:register_codec("FIPA-Agent-Management",
                                     fipa_ontology_sl_codec),
     {ok, #state{}}.
 
+
+handle_call({register, Agent, Pid}, _From, State) ->
+    Ref = erlang:monitor(process, Pid),
+    seresye:assert(agent_registry, {agent, Agent, Ref}),
+    {reply, ok, State};
+    
 handle_call(Call, _From, State) ->
-    {reply, {error, unknown_call}, State}.
+    {reply, {error, unknown_call, Call}, State}.
 
-handle_cast(_Call, State) ->
-    {reply, {error, unknown_cast}, State}.
+handle_cast(Cast, State) ->
+    {reply, {error, unknown_cast, Cast}, State}.
 
-handle_info(Msg, State) ->
+handle_info({'DOWN', Ref, process, _Pid, _}, State) ->
+    seresye:retract_match(agent_registry, {agent, '_', Ref}),
+    {noreply, State};
+
+handle_info(_Msg, State) ->
     {noreply, State}.
 
-code_change(OldVsn, State, Extra) -> {ok, State}.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 terminate(_Reason, _State) ->
     ok.
@@ -115,14 +125,17 @@ terminate(_Reason, _State) ->
 %% Returns: ok.
 %%====================================================================
 register_agent(AgentName) ->
-    seresye:assert(agent_registry, {agent, AgentName}).
+    register_agent(AgentName, self()).
+
+register_agent(AgentName, Pid) ->
+    agent:call(ams, {register, AgentName, Pid}).
 
 %%====================================================================
 %% Func: de_register_agent/1
 %% Returns: ok.
 %%====================================================================
 de_register_agent(AgentName) ->
-    seresye:retract(agent_registry, {agent, AgentName}).
+    seresye:retract_match(agent_registry, {agent, AgentName, '_'}).
 
 %%====================================================================
 %% Func: get_registered_agents/0
@@ -130,7 +143,7 @@ de_register_agent(AgentName) ->
 %%====================================================================
 get_registered_agents() ->
     AgentList = seresye:query_kb(agent_registry,
-                                 {agent, '_'}),
+                                 {agent, '_', '_'}),
     AgentLocalNames = [X || {_, X} <- AgentList],
     PlatformName = exat:current_platform(),
     [lists:flatten([atom_to_list(X), "@", PlatformName])
