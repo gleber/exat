@@ -87,7 +87,7 @@ prepare_reply(Content = #action{'1' = #search{'0' = #'ams-agent-description'{}}}
 %% Returns: {ok, Pid}.
 %%====================================================================
 start_link() ->
-    agent:new(ams, ams, [{behaviour, ams}]).
+    agent:new(ams, ams, [{behaviour, ams}, no_register]).
 
 init(ams, _Params) ->
     logger:start('AMS'),

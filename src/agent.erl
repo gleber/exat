@@ -28,7 +28,8 @@
 -include("fipa_ontology.hrl").
 
 -export([get_acl_semantics/1, get_mind/1, get_property/2, join/1,
-         kill/1, new/2, new/3, set_property/3, set_rational/3, stop/1
+         kill/1, new/2, new/3, set_property/3, set_rational/3, 
+         stop/1, cast/2, call/2
         ]).
 
 -export([code_change/3, terminate/2, handle_call/3, handle_cast/2,
@@ -57,6 +58,12 @@ new(AgentName, Callback, Parameters) ->
     gen_server:start({local, AgentName},
                      agent, [AgentName, Callback, Parameters],
                      []).
+
+call(Ref, Call) ->
+    io:format("~p ~p ~p~n", [Ref, whereis(Ref), Call]),
+    gen_server:call(Ref, Call).
+cast(Ref, Call) ->
+    gen_server:cast(Ref, Call).
 
 %%
 %% MAIN CALLS
@@ -89,9 +96,14 @@ kill(Agent) -> stop(Agent).
 %% Initialize
 %%
 init(Args) ->
-    [AgentName, Callback, Parameters | _] = Args,
-    ams:register_agent(AgentName),
-    {ok, IntState} = Callback:init(AgentName, Parameters),
+    [AgentName, Callback, Params0 | _] = Args,
+    {NoRegister, Params} = proplists_extract(no_register, Params0, false),
+    case NoRegister of
+        false ->
+            ams:register_agent(AgentName);
+        _ -> ok
+    end,
+    {ok, IntState} = Callback:init(AgentName, Params),
     {ok, #state{name = AgentName, callback = Callback,
                 int_state = IntState}}.
 
@@ -179,3 +191,13 @@ code_change(OldVsn,
     {ok, IntState2} = Callback:code_change(OldVsn, IntState,
                                            Extra),
     {ok, State#state{int_state = IntState2}}.
+
+proplists_extract(Key, Proplist0, Default) ->
+    Params = proplists:unfold(Proplist0),
+    case lists:keytake(no_register, 1, Params) of
+        {value, {Key, Val}, P} ->
+            {Val, P};
+        false ->
+            {Default, Params}
+    end.
+    
