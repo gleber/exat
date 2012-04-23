@@ -56,7 +56,7 @@
 http(Port) ->
     logger:start('HTTP-MTP'),
     logger:log('HTTP-MTP',
-               {"MTP Started at port ~w", [Port]}),
+               {"MTP Starting at port ~w", [Port]}),
     {ok, Hostname} = inet:gethostname(),
     {ok, HostEnt} = inet:gethostbyname(Hostname),
     MTPAddress = lists:flatten(["http://",
@@ -64,6 +64,7 @@ http(Port) ->
                                 integer_to_list(Port), "/acc"]),
     seresye:assert(agent_registry,
                    {mtp_address, MTPAddress}),
+    logger:log('HTTP-MTP', {"Handing things over to misultin", []}),
     misultin:start_link([{port, Port},
                          {loop, fun handle_http/1}]).
 
