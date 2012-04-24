@@ -66,6 +66,7 @@ http(Port) ->
                    {mtp_address, MTPAddress}),
     logger:log('HTTP-MTP', {"Handing things over to misultin", []}),
     misultin:start_link([{port, Port},
+                         {acceptors_poolsize, 1},
                          {loop, fun handle_http/1}]).
 
 %%====================================================================
