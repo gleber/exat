@@ -2086,7 +2086,7 @@ yeccpars2_23_(__Stack0) ->
 yeccpars2_110_(__Stack0) ->
  [__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
-   { list_to_atom ( __2 ) , __4 }
+   { binary_to_atom ( __2 , latin1 ) , __4 }
   end | __Stack].
 
 -compile({inline,yeccpars2_115_/1}).

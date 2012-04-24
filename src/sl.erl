@@ -45,15 +45,12 @@ decode(Message) -> decode(Message, ascii_sl, ontology).
 %% Func: decode/3
 %%====================================================================
 decode(AsciiMessage, ascii_sl, erlang_sl) ->
-    %%io:format ("ASCII ~s~n", [AsciiMessage]),
     T = tokenize(AsciiMessage),
     sl_parser:parse(T);
 decode(SLMessage, erlang_sl, ontology) ->
     fipa_ontology_sl_codec:decode(SLMessage);
 decode(AsciiMessage, ascii_sl, ontology) ->
-    {ok, ErlangSL} = decode(AsciiMessage, ascii_sl,
-                            erlang_sl),
-    %%io:format ("~w~n", [ErlangSL]),
+    {ok, ErlangSL} = decode(AsciiMessage, ascii_sl, erlang_sl),
     decode(ErlangSL, erlang_sl, ontology).
 
 %%====================================================================

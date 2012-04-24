@@ -36,13 +36,13 @@ make_xml_envelope(To, From, Length, AclRepr) ->
              [{name, [],
                [binary_to_list(iolist_to_binary(To#'agent-identifier'.name))]},
               {addresses, [],
-               [{url, [], [X]}
+               [{url, [], [binary_to_list(X)]}
                 || X <- To#'agent-identifier'.addresses]}]},
     XmlFrom = {'agent-identifier', [],
                [{name, [],
                  [binary_to_list(iolist_to_binary(From#'agent-identifier'.name))]},
                 {addresses, [],
-                 [{url, [], [X]}
+                 [{url, [], [binary_to_list(X)]}
                   || X <- From#'agent-identifier'.addresses]}]},
     Envelope = {envelope, [],
                 [{params, [{index, 1}],
@@ -74,13 +74,12 @@ get_xml_element(_, _) -> {error, nil}.
 get_xml_text(XML) ->
     [Content | _] = XML#xmlElement.content,
     Text = Content#xmlText.value,
-    Text.
+    iolist_to_binary(Text).
 
 parse_xml_envelope(XmlEnvelope) ->
     {Envelope, _} = xmerl_scan:string(XmlEnvelope),
     {ok, XTo} = get_xml_element(Envelope, to),
-    {ok, XToAgentID} = get_xml_element(XTo,
-                                       'agent-identifier'),
+    {ok, XToAgentID} = get_xml_element(XTo, 'agent-identifier'),
     {ok, XToAgentName} = get_xml_element(XToAgentID, name),
     {ok, XToAgentAddress} = get_xml_element(XToAgentID,
                                             addresses),
@@ -104,10 +103,10 @@ parse_xml_envelope(XmlEnvelope) ->
                                                 %io:format ("From ~s[~s]~n", [FromAgentName, FromURL]),
                                                 %io:format ("To   ~s[~s]~n", [ToAgentName, ToURL]),
                                                 %io:format ("Repr ~s~n", [ACLRepresentation]),
-    {#'agent-identifier'{name = list_to_atom(ToAgentName),
-                         addresses = ToURL},
-     #'agent-identifier'{name = list_to_atom(FromAgentName),
-                         addresses = FromURL},
+    {#'agent-identifier'{name = ToAgentName,
+                         addresses = [ToURL]},
+     #'agent-identifier'{name = FromAgentName,
+                         addresses = [FromURL]},
      ACLRepresentation}.
 
 test() ->

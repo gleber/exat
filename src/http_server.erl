@@ -22,9 +22,8 @@
 %%
 -module(http_server).
 
--export([decode/1, media_type_decode/1, terms_to_atom/1,
-         terms_to_integer/1, terms_to_string/1, terms_to_tuple/1,
-         tokenize/1, trim/1]).
+-export([terms_to_atom/1, terms_to_integer/1, terms_to_string/1,
+         terms_to_tuple/1, tokenize/1, trim/1]).
 
 -author('csanto@diit.unict.it').
 
@@ -34,17 +33,20 @@ tokenize([]) -> [{'$end', 1}];
 tokenize([H | T]) ->
     [{list_to_atom([H]), 1} | tokenize(T)].
 
-terms_to_string([]) -> [];
-terms_to_string([H | T]) ->
+terms_to_string(L) ->
+    list_to_binary(terms_to_string0(L)).
+
+terms_to_string0([]) -> [];
+terms_to_string0([H | T]) ->
     [L | _] = atom_to_list(element(1, H)),
-    [L | terms_to_string(T)].
+    [L | terms_to_string0(T)].
 
-terms_to_atom(X) -> list_to_atom(terms_to_string(X)).
+terms_to_atom(X) -> list_to_atom(terms_to_string0(X)).
 
-terms_to_tuple(X) -> list_to_tuple(terms_to_string(X)).
+terms_to_tuple(X) -> list_to_tuple(terms_to_string0(X)).
 
 terms_to_integer(X) ->
-    Z = terms_to_string(X), list_to_integer(Z).
+    Z = terms_to_string0(X), list_to_integer(Z).
 
 ltrim([]) -> [];
 ltrim([$\s | T]) -> ltrim(T);
@@ -52,8 +54,3 @@ ltrim([H | T]) -> [H | T].
 
 trim(S) ->
     lists:reverse(ltrim(lists:reverse(ltrim(S)))).
-
-decode(M) -> T = tokenize(M), http_parser:parse(T).
-
-media_type_decode(M) ->
-    T = tokenize(M), media_type:parse(T).

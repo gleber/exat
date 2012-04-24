@@ -27,15 +27,13 @@
          hexlify/1, inform/1, parse_message/1, propose/1,
          query_if/1, query_ref/1, refuse/1, reject_proposal/1, reply/3,
          request/1, sendacl/1, sl0_getcontent/1, sl0_getslot/2,
-         sl0_parse/1, sl0_parsecontent/1, unhexlify/1]).
+         sl0_parse/1, sl0_parsecontent/1, unhexlify/1, normalize/1]).
 
 -author('csanto@diit.unict.it').
 
 -include("acl.hrl").
 
 -include("fipa_ontology.hrl").
-
--define(ACL_REPRESENTATION, acl_erl_native).
 
 erl_to_sl0([], Acc) ->
     lists:flatten(lists:reverse([")" | Acc]));
@@ -63,22 +61,17 @@ erlang_to_sl0(ErlangSentence) ->
 
 %%%
 sl0_parse(M) ->
-    S = aclscanner:scan(M),
-    T = aclscanner:tokenize(S),
-    aclparser:parse(T).
+    {ok, sl:decode(M)}.
 
 %% returns {error, ErrorCond} or {ok, Terms}
 
-sl0_getslot(_SearchedSlotname, []) -> ?ACL_ANY;
-sl0_getslot(SearchedSlotname,
-            [{SlotName, SlotValue} | _MessageTail])
-  when SlotName == SearchedSlotname ->
-    SlotValue;
-sl0_getslot(SearchedSlotname, [_ | MessageTail]) ->
-    sl0_getslot(SearchedSlotname, MessageTail).
+sl0_getslot(SearchedSlotname, Slots) when is_binary(SearchedSlotname) ->
+    sl0_getslot(binary_to_atom(SearchedSlotname, latin1), Slots);
+sl0_getslot(SearchedSlotname, Slots) when is_atom(SearchedSlotname) ->
+    proplists:get_value(SearchedSlotname, Slots, ?ACL_ANY).
 
 sl0_getcontent(M) ->
-    atom_to_list(sl0_getslot(content, M)).
+    sl0_getslot(content, M).
 
 tolower(H) -> H + 32.
 
@@ -89,23 +82,18 @@ lowcase([H | T]) -> [H | lowcase(T)].
 
 parse_message(M) ->
     {ok, [SpeechAct | Slots]} = sl0_parse(M),
-    LSpeechAct =
-        list_to_atom(lowcase(atom_to_list(SpeechAct))),
+    io:format("Slots = ~p~n", [Slots]),
+    LSpeechAct = list_to_atom(lowcase(binary_to_list(SpeechAct))),
     Message = #aclmessage{speechact = LSpeechAct,
-                          sender =
-                              translate_agent_identifier(sl0_getslot(sender,
-                                                                     Slots)),
-                          receiver =
-                              translate_receiver_agent_identifier(sl0_getslot(receiver,
-                                                                              Slots)),
+                          sender = translate_agent_identifier(sl0_getslot(sender, Slots)),
+                          receiver = translate_receiver_agent_identifier(sl0_getslot(receiver, Slots)),
                           'reply-to' = sl0_getslot('reply-to', Slots),
                           content = sl0_getslot(content, Slots),
                           language = sl0_getslot(language, Slots),
                           encoding = sl0_getslot(encoding, Slots),
                           ontology = sl0_getslot(ontology, Slots),
                           protocol = sl0_getslot(protocol, Slots),
-                          'conversation-id' =
-                              sl0_getslot('conversation-id', Slots),
+                          'conversation-id' = sl0_getslot('conversation-id', Slots),
                           'reply-with' = sl0_getslot('reply-with', Slots),
                           'in-reply-to' = sl0_getslot('in-reply-to', Slots),
                           'reply-by' = sl0_getslot('reply-by', Slots)},
@@ -114,22 +102,23 @@ parse_message(M) ->
 sl0_parsecontent(M) ->
     sl0_parse(ensure_list(M#aclmessage.content)).
 
-translate_agent_identifier(ID = ['agent-identifier'
+translate_agent_identifier(ID = [<<'agent-identifier'>>
                                  | _]) ->
     sl_to_erlang_agent_identifier(ID);
 translate_agent_identifier(ID) -> ID.
 
-translate_receiver_agent_identifier([set | Set]) ->
+translate_receiver_agent_identifier([<<"set">> | Set]) ->
     [sl_to_erlang_agent_identifier(X) || X <- Set];
 translate_receiver_agent_identifier(ID) ->
     translate_agent_identifier(ID).
 
-sl_to_erlang_agent_identifier(['agent-identifier',
-                               {name, Name}, {addresses, Addresses}]) ->
-    [Adr | _] = sl_sequence_to_erlang(Addresses),
-    #'agent-identifier'{name = Name, addresses = Adr}.
+sl_to_erlang_agent_identifier([<<"agent-identifier">> | Slots]) ->
+    Name = sl0_getslot(name, Slots),
+    Addresses = sl0_getslot(addresses, Slots),
+    Adr = sl_sequence_to_erlang(Addresses),
+    normalize(#'agent-identifier'{name = Name, addresses = Adr}).
 
-sl_sequence_to_erlang([sequence | X]) -> X.
+sl_sequence_to_erlang([<<"sequence">> | X]) -> X.
 
 to_list(X) when is_atom(X) -> atom_to_list(X);
 to_list(X) -> X.
@@ -281,3 +270,9 @@ hexdigit($C) -> 12;
 hexdigit($D) -> 13;
 hexdigit($E) -> 14;
 hexdigit($F) -> 15.
+
+
+normalize(#'agent-identifier'{name = N,
+                              addresses = As} = AI) ->
+    AI#'agent-identifier'{name = iolist_to_binary(N),
+                          addresses = [iolist_to_binary(X)||X<-As]}.

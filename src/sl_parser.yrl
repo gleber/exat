@@ -61,7 +61,7 @@ elements -> elem wsp elements : ['$1'] ++ '$3'.
 elem -> term : '$1'.
 elem -> list : '$1'.
 elem -> slot : '$1'.
-slot -> ':' term wsp slotterm : { list_to_atom ('$2'), '$4'}.
+slot -> ':' term wsp slotterm : { binary_to_atom ('$2', latin1), '$4'}.
 slotterm -> '"' quotedstring '"' : '$2'.
 slotterm -> term : '$1'.
 slotterm -> list : '$1'.

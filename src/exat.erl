@@ -76,17 +76,16 @@ current_platform() ->
                                                              (X) -> X =/= $@
                                                          end,
                                                          atom_to_list(node())),
-    CurrentPlatform ++ "." ++ Hostname.
+    iolist_to_binary([CurrentPlatform, ".", Hostname]).
 
 %%====================================================================
 %% Func: split_agent_identifier/1
 %% Returns: {string(), string()}
 %%====================================================================
 split_agent_identifier(AgentID) ->
-    case lists:splitwith(fun (X) -> X =/= $@ end, AgentID)
-    of
-        {LocalID, []} -> {LocalID, current_platform()};
-        {LocalID, [$@ | RealHAP]} -> {LocalID, RealHAP}
+    case binary:split(AgentID, <<"@">>) of
+        [LocalID] -> {LocalID, current_platform()};
+        [LocalID, RealHAP] -> {LocalID, RealHAP}
     end.
 
 %%====================================================================

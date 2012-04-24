@@ -119,53 +119,41 @@ http_mtp_decode(Req, XmlContent, SLContent) ->
 %%
 decode_and_forward_acl(Req, _, _, Message,
                        "fipa.acl.rep.string.std") ->
-    DecodedMessage = sl:decode(binary_to_list(Message)),
-    %%io:format ("MSG = ~p~n", [DecodedMessage]),
-    ACLMessage = list_to_tuple([aclmessage
-                                | tuple_to_list(DecodedMessage)]),
+    ACLMessage = acl:parse_message(binary_to_list(Message)),
     %%io:format ("Message = ~w~n", [ACLMessage]),
     %%io:format ("R = ~w~n", [ACLMessage#aclmessage.receiver]),
     %%decode content
-    ParsedMessage = case
-                        ontology_service:get_codec(ACLMessage#aclmessage.ontology)
-                    of
+    ParsedMessage = case ontology_service:get_codec(ACLMessage#aclmessage.ontology) of
                         {ok, Codec} ->
-                            {ok, SL} = sl:decode(ACLMessage#aclmessage.content,
-                                                 ascii_sl, erlang_sl),
+                            {ok, SL} = sl:decode(ACLMessage#aclmessage.content, ascii_sl, erlang_sl),
                             %%io:format ("Content = ~p~n", [SL]),
                             ACLMessage#aclmessage{content = Codec:decode(SL)};
                         _ -> ACLMessage
                     end,
     %%determine receiver list
-    Receivers = case
-                    is_list(ParsedMessage#aclmessage.receiver)
-                of
+    Receivers = case is_list(ParsedMessage#aclmessage.receiver) of
                     true -> ParsedMessage#aclmessage.receiver;
                     false -> [ParsedMessage#aclmessage.receiver]
                 end,
     CurrentPlatform = exat:current_platform(),
     %%io:format ("Receivers = ~w~n", [Receivers]),
-    LocalReceivers = [V1
-                      || V1 <- Receivers,
-                         decode_and_forward_acl_1(V1, CurrentPlatform)],
-    MessagesToSend = [ParsedMessage#aclmessage{receiver = X}
-                      || X <- LocalReceivers],
+    LocalReceivers = [V1 || V1 <- Receivers,
+                            is_local(V1, CurrentPlatform)],
+    MessagesToSend = [ ParsedMessage#aclmessage{receiver = X} || X <- LocalReceivers],
     %%io:format ("Parsed Message = ~w~n", [MessagesToSend]),
     lists:foreach(fun (X) ->
-                          Receiver =
-                              (X#aclmessage.receiver)#'agent-identifier'.name,
+                          Receiver = (X#aclmessage.receiver)#'agent-identifier'.name,
                           {ID, _} = exat:split_agent_identifier(Receiver),
                           %%io:format ("Recv = ~w~n", [Receiver]),
-                          gen_server:call(list_to_atom(ID), [acl_erl_native, X])
+                          gen_server:call(binary_to_atom(ID, latin1), [acl_erl_native, X])
                   end,
                   MessagesToSend),
     ?OK_RESPONSE;
 decode_and_forward_acl(Req, _, _, _, _) ->
     ?BAD_RESPONSE.
 
-decode_and_forward_acl_1(X, CurrentPlatform) ->
-    {_ID, HAP} =
-        exat:split_agent_identifier(X#'agent-identifier'.name),
+is_local(X, CurrentPlatform) ->
+    {_ID, HAP} = exat:split_agent_identifier(X#'agent-identifier'.name),
     HAP == CurrentPlatform.
 
 %%====================================================================
@@ -192,7 +180,8 @@ http_mtp_encode_and_send(To, From, Message) ->
                               [$\r, $\n, $\r, $\n], ACL, [$\r, $\n],
                               "--251D738450A171593A1583EB--",
                               [$\r, $\n, $\r, $\n]]),
-    [ReceiverAddr | _] = To#'agent-identifier'.addresses,
+    [ReceiverAddr0 | _] = To#'agent-identifier'.addresses,
+    ReceiverAddr = binary_to_list(ReceiverAddr0),
     {Host, Port} = case http_uri:parse(ReceiverAddr) of
                        {http, _, H, P, _, _} -> {H, P};
                        {ok, {http, _, H, P, _, _}} -> {H, P}
@@ -217,8 +206,7 @@ http_mtp_encode_and_send(To, From, Message) ->
     %%               Headers,
     %%               "multipart/mixed ; boundary=\"251D738450A171593A1583EB\"",
     %%               HTTPBody}, [], [{sync, true}]),
-    HTTPID = gen_server:call(mtp_sender,
-                             {http_post, Request}),
+    HTTPID = gen_server:call(mtp_sender, {http_post, Request}),
     {ok, RequestID} = HTTPID,
     Result = RequestID,
     %%io:format ("Result ~p, ~p~n", [self (), Result]),
