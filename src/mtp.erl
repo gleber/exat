@@ -75,7 +75,7 @@ http(Port) ->
 addresses() ->
     MTPAddress = seresye:query_kb(agent_registry,
                                   {mtp_address, '_'}),
-    [X || {_, X} <- MTPAddress].
+    [ X || {_, X} <- MTPAddress].
 
 %%====================================================================
 %% Func: http_mtp_post/3
@@ -118,7 +118,7 @@ http_mtp_decode(Req, XmlContent, SLContent) ->
 %%
 %%
 decode_and_forward_acl(Req, _, _, Message,
-                       "fipa.acl.rep.string.std") ->
+                       <<"fipa.acl.rep.string.std">>) ->
     ACLMessage = acl:parse_message(binary_to_list(Message)),
     %%io:format ("Message = ~w~n", [ACLMessage]),
     %%io:format ("R = ~w~n", [ACLMessage#aclmessage.receiver]),

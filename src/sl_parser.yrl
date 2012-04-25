@@ -115,7 +115,7 @@ symbol -> '!' : '$1'.
 symbol -> '#' : '$1'.
 symbol -> '%' : '$1'.
 symbol -> '&' : '$1'.
-%symbol -> ''' : '$1'. ?? yecc generates an error
+symbol -> '\'' : '$1'.
 symbol -> '+' : '$1'.
 symbol -> ',' : '$1'.
 symbol -> '-' : '$1'.
@@ -128,7 +128,7 @@ symbol -> '=' : '$1'.
 symbol -> '>' : '$1'.
 symbol -> '?' : '$1'.
 symbol -> '[' : '$1'.
-%symbol -> '\\' : '$1'. ?? yecc generates an error
+symbol -> '\\' : '$1'.
 symbol -> ']' : '$1'.
 symbol -> '^' : '$1'.
 symbol -> '_' : '$1'.

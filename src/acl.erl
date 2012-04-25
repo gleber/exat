@@ -80,10 +80,16 @@ lowcase([H | T]) when (H >= $A) and (H =< $Z) ->
     [tolower(H) | lowcase(T)];
 lowcase([H | T]) -> [H | lowcase(T)].
 
+toupper(H) -> H - 32.
+
+upcase([]) -> [];
+upcase([H | T]) when (H >= $a) and (H =< $z) ->
+    [toupper(H) | upcase(T)];
+upcase([H | T]) -> [H | upcase(T)].
+
 parse_message(M) ->
     {ok, [SpeechAct | Slots]} = sl0_parse(M),
-    io:format("Slots = ~p~n", [Slots]),
-    LSpeechAct = list_to_atom(lowcase(binary_to_list(SpeechAct))),
+    LSpeechAct = list_to_atom(upcase(binary_to_list(SpeechAct))),
     Message = #aclmessage{speechact = LSpeechAct,
                           sender = translate_agent_identifier(sl0_getslot(sender, Slots)),
                           receiver = translate_receiver_agent_identifier(sl0_getslot(receiver, Slots)),
@@ -102,7 +108,7 @@ parse_message(M) ->
 sl0_parsecontent(M) ->
     sl0_parse(ensure_list(M#aclmessage.content)).
 
-translate_agent_identifier(ID = [<<'agent-identifier'>>
+translate_agent_identifier(ID = [<<"agent-identifier">>
                                  | _]) ->
     sl_to_erlang_agent_identifier(ID);
 translate_agent_identifier(ID) -> ID.
@@ -130,50 +136,41 @@ ensure_list(X) -> to_list(X).
 %%
 
 %% if the ID is an object, get the associated agent
-encode_agent_identifier(Identifier)
-  when is_atom(Identifier) ->
-    encode_agent_identifier(atom_to_list(Identifier));
+encode_agent_identifier(Identifier) when is_atom(Identifier) ->
+    encode_agent_identifier(atom_to_binary(Identifier, latin1));
 %% if the ID is a string, transform it into a #agent-identifier
-encode_agent_identifier(Identifier)
-  when is_list(Identifier) ->
-    case sl:isString(Identifier) of
-        true ->
-            {ID, HAP} = exat:split_agent_identifier(Identifier),
-            #'agent-identifier'{name =
-                                    lists:flatten([ID, "@", HAP]),
-                                addresses = mtp:addresses()};
-        false -> [encode_agent_identifier(X) || X <- Identifier]
-    end;
+encode_agent_identifier(Identifier) when is_list(Identifier) ->
+    [encode_agent_identifier(X) || X <- Identifier];
+encode_agent_identifier(Identifier) when is_binary(Identifier) ->
+    {ID, HAP} = exat:split_agent_identifier(Identifier),
+    #'agent-identifier'{name = iolist_to_binary([ID, "@", HAP]),
+                        addresses = [iolist_to_binary(X)||X<-mtp:addresses()]};
 encode_agent_identifier(Default) -> Default.
 
 sendacl(Message) ->
-    Sender =
-        encode_agent_identifier(Message#aclmessage.sender),
-    R =
-        encode_agent_identifier(Message#aclmessage.receiver),
+    Sender = encode_agent_identifier(Message#aclmessage.sender),
+    R      = encode_agent_identifier(Message#aclmessage.receiver),
     Receivers = if is_list(R) -> R;
                    true -> [R]
                 end,
     %%io:format ("Sender ~w~n", [Sender]),
     %%io:format ("Receivers ~w~n", [Receivers]),
     %% encode content
-    EncodedContent = "\"" ++
-        case
-            ontology_service:get_codec(Message#aclmessage.ontology)
-        of
-            {ok, Codec} ->
-                SL = Codec:encode(Message#aclmessage.content),
-                sl:encode(SL);
-            _ -> Message#aclmessage.content
-        end
-        ++ "\"",
-    [_ | Temp] = tuple_to_list(Message#aclmessage{sender =
-                                                      Sender,
+    EncodedContent = ["\"",
+                      case
+                          ontology_service:get_codec(Message#aclmessage.ontology)
+                      of
+                          {ok, Codec} ->
+                              SL = Codec:encode(Message#aclmessage.content),
+                              sl:encode(SL);
+                          _ -> Message#aclmessage.content
+                      end,
+                      "\""],
+    [_ | Temp] = tuple_to_list(Message#aclmessage{sender = Sender,
                                                   receiver = Receivers,
-                                                  content = EncodedContent}),
+                                                  content = iolist_to_binary(EncodedContent)}),
     TransformedMessage = list_to_tuple(Temp),
-    [mtp:http_mtp_encode_and_send(X, Sender,
-                                  TransformedMessage)
+    [mtp:http_mtp_encode_and_send(X, Sender, TransformedMessage)
      || X <- Receivers],
     ok.
 
@@ -190,8 +187,7 @@ propose(Message) ->
     sendacl(Message#aclmessage{speechact = 'PROPOSE'}).
 
 accept_proposal(Message) ->
-    sendacl(Message#aclmessage{speechact =
-                                   'ACCEPT-PROPOSAL'}).
+    sendacl(Message#aclmessage{speechact = 'ACCEPT-PROPOSAL'}).
 
 reject_proposal(Message) ->
     sendacl(Message#aclmessage{speechact =
