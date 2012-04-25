@@ -125,7 +125,7 @@ decode_and_forward_acl(Req, _, _, Message,
     %%decode content
     ParsedMessage = case ontology_service:get_codec(ACLMessage#aclmessage.ontology) of
                         {ok, Codec} ->
-                            {ok, SL} = sl:decode(ACLMessage#aclmessage.content, ascii_sl, erlang_sl),
+                            {ok, SL} = sl:decode(ACLMessage#aclmessage.content),
                             %%io:format ("Content = ~p~n", [SL]),
                             ACLMessage#aclmessage{content = Codec:decode(SL)};
                         _ -> ACLMessage
@@ -160,11 +160,11 @@ is_local(X, CurrentPlatform) ->
 %% Func: http_mtp_encode_and_send/1
 %%====================================================================
 http_mtp_encode_and_send(To, From, Message) ->
-    %%io:format ("Message ~w~n", [Message]),
+    %% io:format ("Message ~w~n", [Message]),
     XX = fipa_ontology_sl_codec:encode(Message),
-    %%io:format ("XX ~w~n", [XX]),
+    %% io:format ("XX ~w~n", [XX]),
     ACL = sl:encode(XX),
-    %%io:format ("ACL ~s~n", [ACL]),
+    %% io:format ("ACL ~s~n", [ACL]),
     Envelope = envelope:make_xml_envelope(To, From,
                                           length(ACL)),
     %%io:format ("Envelope ~s~n", [Envelope]),

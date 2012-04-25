@@ -61,7 +61,7 @@ erlang_to_sl0(ErlangSentence) ->
 
 %%%
 sl0_parse(M) ->
-    {ok, sl:decode(M)}.
+    sl:decode(M).
 
 %% returns {error, ErrorCond} or {ok, Terms}
 
@@ -157,9 +157,7 @@ sendacl(Message) ->
     %%io:format ("Receivers ~w~n", [Receivers]),
     %% encode content
     EncodedContent = ["\"",
-                      case
-                          ontology_service:get_codec(Message#aclmessage.ontology)
-                      of
+                      case ontology_service:get_codec(Message#aclmessage.ontology) of
                           {ok, Codec} ->
                               SL = Codec:encode(Message#aclmessage.content),
                               sl:encode(SL);
@@ -170,8 +168,7 @@ sendacl(Message) ->
                                                   receiver = Receivers,
                                                   content = iolist_to_binary(EncodedContent)}),
     TransformedMessage = list_to_tuple(Temp),
-    [mtp:http_mtp_encode_and_send(X, Sender, TransformedMessage)
-     || X <- Receivers],
+    [mtp:http_mtp_encode_and_send(X, Sender, TransformedMessage) || X <- Receivers],
     ok.
 
 inform(Message) ->

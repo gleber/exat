@@ -33,25 +33,19 @@
 %% External exports
 %%====================================================================
 
--export([decode/1, decode/3, encode/1, get_slot/2,
-         isList/1, isString/1, replace_slot/3]).
+-export([decode/1, decode/3, encode/1, get_slot/2, replace_slot/3]).
 
 %%====================================================================
 %% Func: decode/1
 %%====================================================================
-decode(Message) -> decode(Message, ascii_sl, ontology).
+decode(Message) -> decode(Message, ascii_sl, erlang_sl).
 
 %%====================================================================
 %% Func: decode/3
 %%====================================================================
 decode(AsciiMessage, ascii_sl, erlang_sl) ->
     T = tokenize(AsciiMessage),
-    sl_parser:parse(T);
-decode(SLMessage, erlang_sl, ontology) ->
-    fipa_ontology_sl_codec:decode(SLMessage);
-decode(AsciiMessage, ascii_sl, ontology) ->
-    {ok, ErlangSL} = decode(AsciiMessage, ascii_sl, erlang_sl),
-    decode(ErlangSL, erlang_sl, ontology).
+    sl_parser:parse(T).
 
 %%====================================================================
 %% Func: encode/1
@@ -59,27 +53,22 @@ decode(AsciiMessage, ascii_sl, ontology) ->
 %% Returns: ASCIIForm
 %%====================================================================
 encode(Message) ->
-    binary_to_list(iolist_to_binary(encode(Message,
-                                           isList(Message)))).
+    binary_to_list(iolist_to_binary(encode0(Message))).
 
-encode(X,
-       true) -> % isList
+encode0(X) when is_list(X) ->
     ["(", encode_list_terms([], X), ")"];
-encode({_, ?ACL_ANY},
-       false) -> % is not List
+encode0(X) when is_binary(X) -> % is String
+    [X];
+encode0({_, ?ACL_ANY}) ->
     [];
-encode({SlotName, SlotValue},
-       false) -> % is not List
-    [":", atom_to_list(SlotName), " ",
-     encode(SlotValue, isList(SlotValue)), " "];
-encode(TermValue,
-       false) -> % is String
-    [TermValue, " "].
+encode0({SlotName, SlotValue}) ->
+    [":", atom_to_list(SlotName), " ", encode0(SlotValue)].
 
-encode_list_terms(Acc, []) -> lists:reverse(Acc);
+encode_list_terms(Acc, [Last]) -> 
+    lists:reverse(Acc, [encode0(Last)]);
 encode_list_terms(Acc, [H | T]) ->
-    Encoding = encode(H, isList(H)),
-    encode_list_terms([Encoding | Acc], T).
+    Encoding = encode0(H),
+    encode_list_terms([" ", Encoding | Acc], T).
 
 %%====================================================================
 %% Func: get_slot/2
@@ -100,28 +89,6 @@ get_slot(Key, List) ->
 replace_slot(Key, List, NewValue) ->
     lists:keyreplace(Key, 1, List, {Key, NewValue}).
 
-%%====================================================================
-%% Func: isList/1
-%% Description: Checks if the given data is a list of strings
-%% Returns: true | false
-%%====================================================================
-isList([]) -> false;
-isList([H | _]) when is_number(H) -> false;
-isList([H | _]) when is_binary(H) -> true;
-isList([H | _]) when is_list(H) -> true;
-isList(X) when is_binary(X) -> false;
-isList(X) when is_tuple(X) -> false;
-isList(_) -> true.
-
-%%====================================================================
-%% Func: isString/1
-%% Description: Checks if the given data is a strings
-%% Returns: true | false
-%%====================================================================
-isString([]) -> true;
-isString([H | T]) when is_number(H) -> isString(T);
-isString([H | T]) when is_binary(H) -> isString(T);
-isString(_) -> false.
 
 %%====================================================================
 %% Internal functions

@@ -54,19 +54,15 @@ compile(FileName, SrcPath, DestPath, Options) ->
                                                   "/" ++ FileName ++ ".onto",
                                               "", []),
     %%io:format ("~w~n", [AbstractErlangForm]),
-    {ok, Classes} = compile_lines([],
-                                  list_to_atom(FileName), AbstractErlangForm),
+    {ok, Classes} = compile_lines([], list_to_atom(FileName), AbstractErlangForm),
     %%io:format ("~p~n", [Classes]),
     NewClasses = resolve_inheritance(Classes),
     %%io:format ("~p~n", [NewClasses]),
-    generate_include(DestPath, FileName, NewClasses,
-                     lists:member(include, Options)),
+    generate_include(DestPath, FileName, NewClasses, lists:member(include, Options)),
     %%
-    generate_erlang(DestPath, FileName, Classes, NewClasses,
-                    lists:member(source, Options)),
+    generate_erlang(DestPath, FileName, Classes, NewClasses, lists:member(source, Options)),
     %%
-    generate_sl_codec(DestPath, FileName, NewClasses,
-                      lists:member(sl_codec, Options)),
+    generate_sl_codec(DestPath, FileName, NewClasses, lists:member(sl_codec, Options)),
     %%
     ok.
 
@@ -504,8 +500,7 @@ generate_cast_1(X, ClassName, ResolvedClasses) ->
     generate_translation_lines(SourceClass,
                                DestinationClass).
 
-generate_translation_lines(SourceClass,
-                           DestinationClass) ->
+generate_translation_lines(SourceClass, DestinationClass) ->
     Lines =
         [lists:flatten(io_lib:format("    '~s' = X#'~s'.'~s'",
                                      [X#ontology_property.name,
@@ -574,7 +569,7 @@ generate_sl_encoder_file(Acc, []) ->
 generate_sl_encoder_file(Acc, [Class | T]) ->
     Head =
         io_lib:format("encode(X) when is_record (X,'~s') ->~n "
-                      " [\"~s\"",
+                      " [<<\"~s\">>",
                       [Class#ontology_class.name, Class#ontology_class.name]),
     Properties = generate_sl_encoder_lines([],
                                            Class#ontology_class.name,
@@ -613,46 +608,35 @@ generate_sl_encoder_lines(Acc, ClassName,
 %% Returns: string()
 %%====================================================================
 %% field_sl_encode (ClassName, FieldName, Type, IsPrimitive, IsDigit)
-field_sl_encode(ClassName, FieldName, {sequence_of, _},
-                false, false) ->
-    lists:flatten(io_lib:format("{'~s', [\"sequence\" | encode (X#'~s'.'~s')]}",
+field_sl_encode(ClassName, FieldName, {sequence_of, _}, false, false) ->
+    lists:flatten(io_lib:format("{'~s', [<<\"sequence\">> | encode (X#'~s'.'~s')]}",
                                 [FieldName, ClassName, FieldName]));
-field_sl_encode(ClassName, FieldName, {sequence_of, _},
-                false, true) ->
-    lists:flatten(io_lib:format("[\"sequence\" | encode (X#'~s'.'~s')]",
+field_sl_encode(ClassName, FieldName, {sequence_of, _}, false, true) ->
+    lists:flatten(io_lib:format("[<<\"sequence\">> | encode (X#'~s'.'~s')]",
                                 [ClassName, FieldName]));
-field_sl_encode(ClassName, FieldName, {sequence_of, _},
-                true, false) ->
-    lists:flatten(io_lib:format("{'~s', [\"sequence\" | X#'~s'.'~s']}",
+field_sl_encode(ClassName, FieldName, {sequence_of, _}, true, false) ->
+    lists:flatten(io_lib:format("{'~s', [<<\"sequence\">> | X#'~s'.'~s']}",
                                 [FieldName, ClassName, FieldName]));
-field_sl_encode(ClassName, FieldName, {sequence_of, _},
-                true, true) ->
-    lists:flatten(io_lib:format("[\"sequence\" | X#'~s'.'~s']",
+field_sl_encode(ClassName, FieldName, {sequence_of, _}, true, true) ->
+    lists:flatten(io_lib:format("[<<\"sequence\">> | X#'~s'.'~s']",
                                 [ClassName, FieldName]));
-field_sl_encode(ClassName, FieldName, {set_of, _},
-                false, _) ->
-    lists:flatten(io_lib:format("{'~s', [\"set\" | encode (X#'~s'.'~s') ]}",
+field_sl_encode(ClassName, FieldName, {set_of, _}, false, _) ->
+    lists:flatten(io_lib:format("{'~s', [<<\"set\">> | encode (X#'~s'.'~s') ]}",
                                 [FieldName, ClassName, FieldName]));
-field_sl_encode(ClassName, FieldName, {set_of, _}, true,
-                _) ->
-    lists:flatten(io_lib:format("{'~s',[\"set\" | X#'~s'.'~s' ]}",
+field_sl_encode(ClassName, FieldName, {set_of, _}, true, _) ->
+    lists:flatten(io_lib:format("{'~s',[<<\"set\">> | X#'~s'.'~s' ]}",
                                 [FieldName, ClassName, FieldName]));
-field_sl_encode(ClassName, FieldName, _, false,
-                false) ->
+field_sl_encode(ClassName, FieldName, _, false, false) ->
     lists:flatten(io_lib:format("{'~s', encode (X#'~s'.'~s')}",
                                 [FieldName, ClassName, FieldName]));
-field_sl_encode(ClassName, FieldName, FieldType, true,
-                false) ->
-    lists:flatten(io_lib:format("{'~s', ontology:sl_encode_term (X#'~s'.'~s', "
-                                "~s)}",
+field_sl_encode(ClassName, FieldName, FieldType, true, false) ->
+    lists:flatten(io_lib:format("{'~s', ontology:sl_encode_term (X#'~s'.'~s', ~s)}",
                                 [FieldName, ClassName, FieldName, FieldType]));
 field_sl_encode(ClassName, FieldName, _, false, true) ->
     lists:flatten(io_lib:format("encode (X#'~s'.'~s')",
                                 [ClassName, FieldName]));
-field_sl_encode(ClassName, FieldName, FieldType, true,
-                true) ->
-    lists:flatten(io_lib:format("ontology:sl_encode_term (X#'~s'.'~s', "
-                                "~s)",
+field_sl_encode(ClassName, FieldName, FieldType, true, true) ->
+    lists:flatten(io_lib:format("ontology:sl_encode_term (X#'~s'.'~s', ~s)",
                                 [ClassName, FieldName, FieldType])).
 
 %%====================================================================
@@ -665,13 +649,11 @@ generate_sl_decoder_file(Classes) ->
 
 generate_sl_decoder_file(Acc, []) ->
     lists:flatten(lists:reverse([["decode(nil) -> nil;\n\n",
-                                  "decode(X) -> \n",
-                                  "  case sl:isList (X) of\n",
-                                  "    true -> [decode (Y) || Y <- X];\n",
-                                  "    _ -> X\n", "  end.\n\n",
-                                  "set_of ([ \"set\" | L]) -> decode (L);\n",
-                                  "set_of ([ \"set\", L]) -> decode (L).\n\n",
-                                  "sequence_of ([ \"sequence\" | L]) -> "
+                                  "decode(X) when is_list(X) -> \n",
+                                  "    [decode (Y) || Y <- X];\n",
+                                  "decode(X) -> X.\n", 
+                                  "set_of ([ <<\"set\">> | L]) -> decode (L).\n",
+                                  "sequence_of ([ <<\"sequence\">> | L]) -> "
                                   "decode (L).\n",
                                   "\n"]
                                  | Acc]));
@@ -692,7 +674,7 @@ generate_sl_decoder_file(Acc, [Class | T]) ->
     generate_sl_decoder_file([Line | Acc], T).
 
 generate_sl_decoder_clause(Class, Properties) ->
-    Head = io_lib:format("decode([\"~s\" | T]) ->\n",
+    Head = io_lib:format("decode([<<\"~s\">> | T]) ->\n",
                          [Class#ontology_class.name]),
     Lines = generate_sl_decoder_lines([],
                                       Class#ontology_class.name, Properties),
@@ -796,8 +778,8 @@ digit_of('9') -> 9.
 %% Returns: string() | nil
 %%====================================================================
 sl_encode_term(nil, _) -> nil;
-sl_encode_term(X, integer) -> integer_to_list(X);
-sl_encode_term(X, float) -> float_to_list(X);
+sl_encode_term(X, integer) -> list_to_binary(integer_to_list(X));
+sl_encode_term(X, float) -> list_to_binary(float_to_list(X));
 sl_encode_term(X, _) -> X.
 
 %%====================================================================
@@ -806,6 +788,6 @@ sl_encode_term(X, _) -> X.
 %% Returns: term() | nil
 %%====================================================================
 sl_decode_term(nil, _) -> nil;
-sl_decode_term(X, integer) -> list_to_integer(X);
-sl_decode_term(X, float) -> list_to_float(X);
+sl_decode_term(X, integer) -> list_to_integer(binary_to_list(X));
+sl_decode_term(X, float) -> list_to_float(binary_to_list(X));
 sl_decode_term(X, _) -> X.
