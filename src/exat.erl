@@ -33,7 +33,9 @@
 %%====================================================================
 
 -export([current_platform/0, get_argument/1,
-         split_agent_identifier/1, start/2, stop/1]).
+         split_agent_identifier/1, split_exat_platform_identifier/1,
+
+         start/2, stop/1]).
 
 %%====================================================================
 %% Internal exports
@@ -58,7 +60,7 @@
 %%          {ok, Pid, State} |
 %%          {error, Reason}
 %%====================================================================
-start(_Type, _StartArgs) -> 
+start(_Type, _StartArgs) ->
     exat_sup:start_link().
 
 %%====================================================================
@@ -72,11 +74,8 @@ stop(_State) -> ok.
 %% Returns: string()
 %%====================================================================
 current_platform() ->
-    {CurrentPlatform, [$@ | Hostname]} = lists:splitwith(fun
-                                                             (X) -> X =/= $@
-                                                         end,
-                                                         atom_to_list(node())),
-    iolist_to_binary([CurrentPlatform, ".", Hostname]).
+    [Node, Host] = string:tokens(atom_to_list(node()), "@"),
+    iolist_to_binary([Node, ":", Host]).
 
 %%====================================================================
 %% Func: split_agent_identifier/1
@@ -87,6 +86,11 @@ split_agent_identifier(AgentID) ->
         [LocalID] -> {LocalID, current_platform()};
         [LocalID, RealHAP] -> {LocalID, RealHAP}
     end.
+
+split_exat_platform_identifier(AP) ->
+    [APName, APHost] = binary:split(AP, <<":">>),
+    {APName, APHost}.
+
 
 %%====================================================================
 %% Func: get_argument/1

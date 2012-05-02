@@ -28,9 +28,11 @@
 -include("fipa_ontology.hrl").
 
 -export([get_acl_semantics/1, get_mind/1, get_property/2, join/1,
-         kill/1, new/2, new/3, set_property/3, set_rational/3, 
+         kill/1, new/2, new/3, set_property/3, set_rational/3,
          stop/1, cast/2, call/2
         ]).
+
+-export([names/1, name/1, host/1, ap/1]).
 
 -export([code_change/3, terminate/2, handle_call/3, handle_cast/2,
          init/1, handle_info/2, behaviour_info/1]).
@@ -60,7 +62,6 @@ new(AgentName, Callback, Parameters) ->
                      []).
 
 call(Ref, Call) ->
-    io:format("~p ~p ~p~n", [Ref, whereis(Ref), Call]),
     gen_server:call(Ref, Call).
 cast(Ref, Call) ->
     gen_server:cast(Ref, Call).
@@ -157,6 +158,7 @@ handle_call([acl_erl_native, Acl], _From,
 handle_call(Call, From,
             #state{int_state = IntState, callback = Callback} =
                 State) ->
+    io:format("~p ~p~n", [From, Call]),
     R = Callback:handle_call(Call, From, IntState),
     IntState2 = element(size(R), R),
     setelement(size(R), R,
@@ -200,4 +202,28 @@ proplists_extract(Key, Proplist0, Default) ->
         false ->
             {Default, Params}
     end.
-    
+
+
+%%
+%% Utils
+%%
+
+
+names(List) ->
+    [ name(A) || A <- List ].
+
+name(#'agent-identifier'{name = N}) ->
+    N.
+
+ap(#'agent-identifier'{name = N}) ->
+    ap(N);
+ap(N) ->
+    {Name, HAP} = exat:split_agent_identifier(N),
+    HAP.
+
+host(#'agent-identifier'{} = A) ->
+    HAP = ap(A),
+    host(HAP);
+host(HAP) ->
+    {_APName, Hostname} = exat:split_exat_platform_identifier(HAP),
+    Hostname.
