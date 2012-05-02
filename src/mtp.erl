@@ -206,14 +206,14 @@ http_mtp_encode_and_send(To, From, Message) ->
     %%               Headers,
     %%               "multipart/mixed ; boundary=\"251D738450A171593A1583EB\"",
     %%               HTTPBody}, [], [{sync, true}]),
-    HTTPID = gen_server:call(mtp_sender, {http_post, Request}),
-    {ok, RequestID} = HTTPID,
-    Result = RequestID,
-    %%io:format ("Result ~p, ~p~n", [self (), Result]),
-    {StatusLine, _ReceivedHeaders, _ReceivedBody} = Result,
-    %%io:format ("Status ~w,~s~n", [StatusCode, ReasonPhrase]),
-    %%io:format ("Body ~s~n", [ReceivedBody]).
-    {_HttpVersion, _StatusCode, _ReasonPhrase} = StatusLine.
+    case gen_server:call(mtp_sender, {http_post, Request}) of        
+        {ok, RequestID} ->
+            Result = RequestID,
+            {StatusLine, _ReceivedHeaders, _ReceivedBody} = Result,
+            {_HttpVersion, _StatusCode, _ReasonPhrase} = StatusLine;
+        _ ->
+            ok
+    end.
 
 %%====================================================================
 %% Func: init/1
