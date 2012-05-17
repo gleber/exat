@@ -1,3 +1,7 @@
 *.beam
 *.bak
 /lib/*
+rebar
+.project
+.settings
+erl_crash.dump
