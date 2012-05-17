@@ -53,6 +53,10 @@
 
 start() ->
     application:start(inets, permanent),  % FIXME! Use ".rel"
+	application:start(xmerl, permanent),
+	application:start(misultin, permanent),
+	application:start(erlware_commons),
+	application:start(seresye),
     application:start(exat, permanent),
     case init:get_argument(start) of
         {ok, [[List]]} ->
