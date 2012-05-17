@@ -27,6 +27,8 @@
 
 -include("fipa_ontology.hrl").
 
+-include("agent.hrl").
+
 -export([get_acl_semantics/1, get_mind/1, get_property/2, join/1,
          kill/1, new/2, new/3, set_property/3, set_rational/3,
          stop/1, cast/2, call/2
@@ -48,10 +50,6 @@ behaviour_info(callbacks) ->
 behaviour_info(_Other) ->
     undefined.
 
-
--record(state,
-        {name, callback, int_state, acl_queue, dict,
-         process_queue}).
 
 new(AgentName, Callback) ->
     new(AgentName, Callback, []).
@@ -105,14 +103,14 @@ init(Args) ->
         _ -> ok
     end,
     {ok, IntState} = Callback:init(AgentName, Params),
-    {ok, #state{name = AgentName, callback = Callback,
+    {ok, #agent_state{name = AgentName, callback = Callback,
                 int_state = IntState}}.
 
 %%
 %% Terminate
 %%
 terminate(Reason,
-          #state{callback = Callback, name = AgentName,
+          #agent_state{callback = Callback, name = AgentName,
                  int_state = IntState} =
               _State) ->
     ams:de_register_agent(AgentName),
@@ -123,20 +121,20 @@ terminate(Reason,
 %% Gets a property from agent
 %%
 handle_call({get_property, _PropertyName}, _From,
-            #state{} = State) ->
+            #agent_state{} = State) ->
     {reply, {error, notimpl}, State};
 %%
 %% Sets a property
 %%
 handle_call({set_property, _PropertyName,
              _PropertyValue},
-            _From, #state{} = State) ->
+            _From, #agent_state{} = State) ->
     {reply, {error, notimpl}, State};
 %%
 %% Receives an ACL message in String format
 %%
 handle_call([acl, AclStr], _From,
-            #state{int_state = IntState, callback = Callback} =
+            #agent_state{int_state = IntState, callback = Callback} =
                 State) ->
     %%io:format("[Agent] Received ACL=~s\n", [Acl]),
     case catch acl:parse_message(AclStr) of
@@ -144,25 +142,25 @@ handle_call([acl, AclStr], _From,
         Acl ->
             {noreply, IntState2} = Callback:handle_acl(Acl,
                                                        IntState),
-            {reply, ok, State#state{int_state = IntState2}}
+            {reply, ok, State#agent_state{int_state = IntState2}}
     end;
 %%
 %% Receives an ACL message in Erlang format
 %%
 handle_call([acl_erl_native, Acl], _From,
-            #state{int_state = IntState, callback = Callback} =
+            #agent_state{int_state = IntState, callback = Callback} =
                 State) ->
     {noreply, IntState2} = Callback:handle_acl(Acl,
                                                IntState),
-    {reply, ok, State#state{int_state = IntState2}};
+    {reply, ok, State#agent_state{int_state = IntState2}};
 handle_call(Call, From,
-            #state{int_state = IntState, callback = Callback} =
+            #agent_state{int_state = IntState, callback = Callback} =
                 State) ->
     io:format("~p ~p~n", [From, Call]),
     R = Callback:handle_call(Call, From, IntState),
     IntState2 = element(size(R), R),
     setelement(size(R), R,
-               State#state{int_state = IntState2}).
+               State#agent_state{int_state = IntState2}).
 
 %%
 %% Stops the agent process
@@ -171,28 +169,28 @@ handle_call(Call, From,
 handle_cast('$agent_stop', State) ->
     {stop, normal, State};
 handle_cast(Cast,
-            #state{int_state = IntState, callback = Callback} =
+            #agent_state{int_state = IntState, callback = Callback} =
                 State) ->
     R = Callback:handle_cast(Cast, IntState),
     IntState2 = element(size(R), R),
     setelement(size(R), R,
-               State#state{int_state = IntState2}).
+               State#agent_state{int_state = IntState2}).
 
 handle_info(Msg,
-            #state{int_state = IntState, callback = Callback} =
+            #agent_state{int_state = IntState, callback = Callback} =
                 State) ->
     R = Callback:handle_info(Msg, IntState),
     IntState2 = element(size(R), R),
     setelement(size(R), R,
-               State#state{int_state = IntState2}).
+               State#agent_state{int_state = IntState2}).
 
 code_change(OldVsn,
-            #state{int_state = IntState, callback = Callback} =
+            #agent_state{int_state = IntState, callback = Callback} =
                 State,
             Extra) ->
     {ok, IntState2} = Callback:code_change(OldVsn, IntState,
                                            Extra),
-    {ok, State#state{int_state = IntState2}}.
+    {ok, State#agent_state{int_state = IntState2}}.
 
 proplists_extract(Key, Proplist0, Default) ->
     Params = proplists:unfold(Proplist0),
