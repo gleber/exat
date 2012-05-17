@@ -20,15 +20,16 @@ stop() -> agent:stop(pingagent).
 %%agents callback
 
 handle_acl(#aclmessage{speechact = 'QUERY-REF',
-                       sender = Sender, content = "ping"} =
+                       sender = Sender, content = <<"ping">>} =
                Msg,
            State) ->
     io:format("Got ping query from ~p: ~p~n~nInforming "
               "that I'm alive!~n~n",
               [Sender, Msg]),
-    spawn(fun () -> acl:reply(Msg, 'INFORM', "alive") end),
+    spawn(fun () -> acl:reply(Msg, 'INFORM', <<"alive">>) end),
     {noreply, State};
 handle_acl(#aclmessage{} = Msg, State) ->
+	io:format("unknown ~p~n", [Msg]),
     {noreply, State}.
 
 %% gen_server callbacks

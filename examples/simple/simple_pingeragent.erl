@@ -15,13 +15,13 @@
 
 start() ->
     agent:new(pingeragent, ?MODULE,
-              [{"localhost", 7778, "pingagent"}]).
+              [{"localhost", 7778, <<"pingagent">>}]).
 
 stop() -> agent:stop(pingeragent).
 
 %%agents callback
 handle_acl(#aclmessage{speechact = 'INFORM',
-                       content = "alive"} =
+                       content = <<"alive">>} =
                Msg,
            {_, DestAgent} = State) ->
     io:format("~p is alive, since I got: ~p~n~n",
@@ -33,7 +33,7 @@ handle_acl(#aclmessage{} = Msg, State) ->
 %% gen_server callbacks
 
 init(Name, [DestAgent]) ->
-    timer:send_interval(500, ping), {ok, {Name, DestAgent}}.
+    timer:send_interval(5000, ping), {ok, {Name, DestAgent}}.
 
 handle_call(Call, _From, State) ->
     {reply, {error, unknown_call}, State}.
@@ -41,13 +41,15 @@ handle_call(Call, _From, State) ->
 handle_cast(_Call, State) -> {noreply, State}.
 
 handle_info(ping, {SelfName, DestAgent} = State) ->
+	io:format("ping~n"),
     {Ip, Port, Name} = DestAgent,
-    Addr = lists:flatten(io_lib:format("http://~s:~b",
-                                       [Ip, Port])),
+    Addr = list_to_binary(lists:flatten(io_lib:format("http://~s:~b",
+                                       [Ip, Port]))),
+	io:format("addr ~p~n", [Addr]),
     Dest = #'agent-identifier'{name = Name,
                                addresses = [Addr]},
     PingMsg = #aclmessage{sender = SelfName,
-                          receiver = Dest, content = "ping"},
+                          receiver = Dest, content = <<"ping">>},
     spawn(fun () -> Resp = acl:query_ref(PingMsg) end),
     {noreply, State};
 handle_info(Msg, State) -> {noreply, State}.
