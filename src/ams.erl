@@ -144,7 +144,7 @@ de_register_agent(AgentName) ->
 get_registered_agents() ->
     AgentList = seresye:query_kb(agent_registry,
                                  {agent, '_', '_'}),
-    AgentLocalNames = [X || {_, X} <- AgentList],
+    AgentLocalNames = [X || {_, X, _} <- AgentList],
     PlatformName = exat:current_platform(),
     [lists:flatten([atom_to_list(X), "@", PlatformName])
      || X <- AgentLocalNames].
