@@ -5,3 +5,5 @@ rebar
 .project
 .settings
 erl_crash.dump
+*.*~
+*gproc_dist_*
