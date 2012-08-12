@@ -51,14 +51,19 @@
 -record(state, {}).
 
 handle_acl(#aclmessage{speechact = 'REQUEST',
-                       ontology = "FIPA-Agent-Management",
-                       protocol = "fipa-request"} = Message,
+                       ontology = ?FIPA_AGENT_MANAGEMENT,
+                       protocol = <<"fipa-request">>} = Message,
            State) ->
-    lists:foreach(fun(Content) ->
-                          ContentReply = prepare_reply(Content),
-                          spawn(fun () -> acl:reply(Message, 'INFORM', ContentReply) end)
-                  end, Message#aclmessage.content),
+    F = fun(Content) ->
+            ContentReply = prepare_reply(Content),
+            spawn(fun () -> acl:reply(Message, 'INFORM', ContentReply) end)
+    end,
 
+    case Message#aclmessage.content of
+        L when is_list(L) ->
+            lists:foreach(F, L);
+        C -> F(C)
+    end,
     {noreply, State}.
 
 prepare_reply(Content = #action{'1' = #'get-description'{}}) ->
@@ -80,7 +85,10 @@ prepare_reply(Content = #action{'1' = #search{'0' = #'ams-agent-description'{}}}
                                              ownership = "NONE",
                                              state = "active"}
                     || X <- Agents],
-    #result{'0' = Content, '1' = Descriptions}.
+    #result{'0' = Content, '1' = Descriptions};
+prepare_reply(Content = #action{'1' = #register{name = Agent}}) ->
+    logger:log('AMS', "register"),
+    #result{'0' = Content, '1' = Agent}.
 
 %%====================================================================
 %% Func: start_link/0
@@ -92,16 +100,16 @@ start_link() ->
 init(ams, _Params) ->
     logger:start('AMS'),
     logger:log('AMS', "Staring AMS."),
-    ontology_service:register_codec("FIPA-Agent-Management",
+    ontology_service:register_codec(?FIPA_AGENT_MANAGEMENT,
                                     fipa_ontology_sl_codec),
     {ok, #state{}}.
 
 
-handle_call({register, Agent, Pid}, _From, State) ->
+handle_call({register, Agent, Pid, Addrs}, _From, State) ->
     Ref = erlang:monitor(process, Pid),
-    seresye:assert(agent_registry, {agent, Agent, Ref}),
+    seresye:assert(agent_registry, {agent, Agent, Ref, Addrs}),
     {reply, ok, State};
-    
+
 handle_call(Call, _From, State) ->
     {reply, {error, unknown_call, Call}, State}.
 
@@ -109,7 +117,7 @@ handle_cast(Cast, State) ->
     {reply, {error, unknown_cast, Cast}, State}.
 
 handle_info({'DOWN', Ref, process, _Pid, _}, State) ->
-    seresye:retract_match(agent_registry, {agent, '_', Ref}),
+    seresye:retract_match(agent_registry, {agent, '_', Ref, '_'}),
     {noreply, State};
 
 handle_info(_Msg, State) ->
@@ -127,15 +135,24 @@ terminate(_Reason, _State) ->
 register_agent(AgentName) ->
     register_agent(AgentName, self()).
 
-register_agent(AgentName, Pid) ->
-    agent:call(ams, {register, AgentName, Pid}).
+%%====================================================================
+%% Func: register_agent/2
+%% Returns: ok.
+%%====================================================================
+register_agent(AgentName, Pid) when is_pid(Pid) ->
+    register_agent(AgentName, [], Pid);
+register_agent(AgentName, Addresses) ->
+    register_agent(AgentName, Addresses, self()).
+
+register_agent(AgentName, Addresses, Pid) ->
+    agent:call(ams, {register, AgentName, Pid, Addresses}).
 
 %%====================================================================
 %% Func: de_register_agent/1
 %% Returns: ok.
 %%====================================================================
 de_register_agent(AgentName) ->
-    seresye:retract_match(agent_registry, {agent, AgentName, '_'}).
+    seresye:retract_match(agent_registry, {agent, AgentName, '_', '_'}).
 
 %%====================================================================
 %% Func: get_registered_agents/0
@@ -143,8 +160,8 @@ de_register_agent(AgentName) ->
 %%====================================================================
 get_registered_agents() ->
     AgentList = seresye:query_kb(agent_registry,
-                                 {agent, '_', '_'}),
-    AgentLocalNames = [X || {_, X, _} <- AgentList],
+                                 {agent, '_', '_', '_'}),
+    AgentLocalNames = [X || {_, X, _, _} <- AgentList],
     PlatformName = exat:current_platform(),
     [lists:flatten([atom_to_list(X), "@", PlatformName])
      || X <- AgentLocalNames].

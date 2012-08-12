@@ -1,3 +1,4 @@
+-include("ontology.hrl").
 -record('agent-identifier',{
           'name',
           'addresses'}).
@@ -352,3 +353,8 @@
 -record('ap-description',{
           'name',
           'ap-services'}).
+
+-record('register', {
+          'ams-description',
+          'name'
+        }).

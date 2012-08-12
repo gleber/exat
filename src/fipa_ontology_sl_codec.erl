@@ -752,6 +752,9 @@ encode(X) when is_record(X, 'ap-description') ->
      {'ap-services',
       [<<"sequence">>
            | encode(X#'ap-description'.'ap-services')]}];
+encode(X) when is_record(X, 'register') ->
+    [<<"register">>, {'ams-description', '_'},
+     {'name', encode(X#'register'.name)}];
 encode(X) when is_list(X) -> [encode(Y) || Y <- X];
 encode(nil) -> nil;
 encode(X) -> exit({ontology_error, X}).
@@ -1555,7 +1558,7 @@ decode([<<"search-constraints">> | T]) ->
 decode([<<"result">> | T]) ->
     #result{'0' = decode(lists:nth(1, T)),
             '1' = decode(lists:nth(2, T))};
-decode([<<"result-specification">> | T]) ->
+decode([<<"result-specification">> | _T]) ->
     #'result-specification'{};
 decode([<<"ap-service">> | T]) ->
     #'ap-service'{name =
@@ -1568,6 +1571,8 @@ decode([<<"ap-description">> | T]) ->
                           ontology:sl_decode_term(sl:get_slot(name, T), string),
                       'ap-services' =
                           decode(sequence_of(sl:get_slot('ap-services', T)))};
+decode([<<"register">> | T]) ->
+    #'register'{name = decode(sl:get_slot('name', T))};
 decode(nil) -> nil;
 decode(X) when is_list(X) -> [decode(Y) || Y <- X];
 decode(X) -> X.

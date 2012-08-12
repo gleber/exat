@@ -31,6 +31,8 @@
                              cardinality = nil,
                              default = ?NO_DEFAULT}).
 
+-define (FIPA_AGENT_MANAGEMENT, <<"FIPA-Agent-Management">>).
+
 %
 %
 %

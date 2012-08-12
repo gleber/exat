@@ -121,11 +121,10 @@ decode_and_forward_acl(Req, _, _, Message,
                        <<"fipa.acl.rep.string.std">>) ->
     ACLMessage = acl:parse_message(binary_to_list(Message)),
     %%io:format ("Message = ~w~n", [ACLMessage]),
-    %%io:format ("R = ~w~n", [ACLMessage#aclmessage.receiver]),
     %%decode content
     ParsedMessage = case ontology_service:get_codec(ACLMessage#aclmessage.ontology) of
                         {ok, Codec} ->
-                            {ok, SL} = sl:decode(ACLMessage#aclmessage.content),
+                            {ok, SL} = sl:decode(binary_to_list(ACLMessage#aclmessage.content)),
                             %%io:format ("Content = ~p~n", [SL]),
                             ACLMessage#aclmessage{content = Codec:decode(SL)};
                         _ -> ACLMessage
