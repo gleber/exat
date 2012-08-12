@@ -6,7 +6,7 @@
 -export([start/0, stop/0]). % API
 
 -export([code_change/3, handle_acl/2, handle_call/3,
-         handle_cast/2, handle_info/2, init/2, terminate/2]).
+         handle_cast/2, handle_info/2, init/2, terminate/2, ams_register_acl/0]).
 
 %% mobile_proc callbacks
 -export([init_state/1, send_me/1, register/0]).
@@ -30,14 +30,14 @@ stop() -> mobile_agent:stop(pingagent).
 handle_acl(#aclmessage{speechact = 'QUERY-REF',
                        sender = Sender, content = <<"ping">>} =
                Msg,
-           State) ->
-    io:format("Got ping query from ~p: ~p~n~nInforming "
+           {Name, Acc}) ->
+    io:format("Got ping query ~p from ~p: ~p~n~nInforming "
               "that I'm alive!~n~n",
-              [Sender, Msg]),
+              [Acc, Sender, Msg]),
     spawn(fun () -> acl:reply(Msg, 'INFORM', <<"alive">>) end),
-    {noreply, State};
+    {noreply, {Name, Acc+1}};
 handle_acl(#aclmessage{} = Msg, State) ->
-	io:format("unknown ~p~n", [Msg]),
+    io:format("unknown ~p~n", [Msg]),
     {noreply, State}.
 
 %% ====================================================================
@@ -45,27 +45,23 @@ handle_acl(#aclmessage{} = Msg, State) ->
 %% ====================================================================
 
 init_state({AgentName, Callback, State}) ->
-	RunListener = fun() ->
-		io:format("Running listener ~p", [self()]),
-		receive
-			{mobility, run} ->
-				Status = mobile_agent:new_with_state(AgentName, Callback, [State]),
-				io:format("started with state ~p and got ~p", [State, Status]),
-				proc_mobility:started(self())
-		end,
-		io:format("Listener finished")
-	end,
-	spawn(RunListener).
+    Status = mobile_agent:new_with_state(AgentName, Callback, [{saved_state, State}]),
+    io:format("started with state ~p and got ~p", [State, Status]).
 
 send_me(Destination) ->
-	gen_server:call(pingagent, {mobility, send_me, Destination}).
+    gen_server:call(pingagent, {mobility, send_me, Destination}).
 
 register() ->
-	gen_server:call(pingagent, {mobility, register}).
+    gen_server:call(pingagent, {mobility, register}).
 
 %% gen_server callbacks
 
-init(Name, _Params) -> {ok, Name}.
+init(Name, [{saved_state, State}]) ->
+    {ok, State};
+
+init(Name, _Params) ->
+    {ok, {Name, 0}}.
+
 
 handle_call(Call, _From, State) ->
     {reply, {error, unknown_call}, State}.
@@ -77,3 +73,20 @@ handle_info(Msg, State) -> {noreply, State}.
 code_change(_, State, _) -> {ok, State}.
 
 terminate(_, _) -> ok.
+
+ams_register_acl() ->
+    Addr = <<"http://localhost:7778">>,
+    Dest = #'agent-identifier'{name = <<"ams">>, addresses=[Addr]},
+    Content = #action{
+            '0' = Dest,
+            '1' = #'register'{
+                name=#'agent-identifier'{name = <<"pingagent2">>, 
+                                         addresses=[<<"http://127.0.0.1:7778">>]}}},
+    PingMsg = #aclmessage{sender = pingagent,
+                          receiver = Dest,
+                          content = Content,
+                          ontology = ?FIPA_AGENT_MANAGEMENT,
+                          protocol = <<"fipa-request">>
+                         },
+    io:format(acl:request(PingMsg)).
+
