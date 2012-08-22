@@ -142,9 +142,9 @@ decode_and_forward_acl(Req, _, _, Message,
     %%io:format ("Parsed Message = ~w~n", [MessagesToSend]),
     lists:foreach(fun (X) ->
                           Receiver = (X#aclmessage.receiver)#'agent-identifier'.name,
-                          {ID, _} = exat:split_agent_identifier(Receiver),
+                          %%{ID, _} = exat:split_agent_identifier(Receiver),
                           %%io:format ("Recv = ~w~n", [Receiver]),
-                          gen_server:call(binary_to_atom(ID, latin1), [acl_erl_native, X])
+                          gen_server:call(binary_to_atom(Receiver, utf8), [acl_erl_native, X])
                   end,
                   MessagesToSend),
     ?OK_RESPONSE;

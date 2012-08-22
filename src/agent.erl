@@ -34,7 +34,7 @@
          stop/1, cast/2, call/2
         ]).
 
--export([names/1, name/1, host/1, ap/1]).
+-export([names/1, name/1, host/1, ap/1, full_local_name/1]).
 
 -export([code_change/3, terminate/2, handle_call/3, handle_cast/2,
          init/1, handle_info/2, behaviour_info/1]).
@@ -225,3 +225,6 @@ host(#'agent-identifier'{} = A) ->
 host(HAP) ->
     {_APName, Hostname} = exat:split_exat_platform_identifier(HAP),
     Hostname.
+
+full_local_name(Name) ->
+    list_to_atom(Name++"@"++binary_to_list(exat:current_platform())).

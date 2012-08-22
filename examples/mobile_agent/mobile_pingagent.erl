@@ -20,7 +20,7 @@
 start() -> 
 	application:start(gproc),
 	application:start(proc_mobility),
-	mobile_agent:new(pingagent, ?MODULE, []),
+    mobile_agent:new(agent:full_local_name("pingagent"), ?MODULE, []),
 	register().
 
 stop() -> mobile_agent:stop(pingagent).
@@ -49,10 +49,10 @@ init_state({AgentName, Callback, State}) ->
     io:format("started with state ~p and got ~p", [State, Status]).
 
 send_me(Destination) ->
-    gen_server:call(pingagent, {mobility, send_me, Destination}).
+    gen_server:call(mobile_agent:full_local_name("pingagent"), {mobility, send_me, Destination}).
 
 register() ->
-    gen_server:call(pingagent, {mobility, register}).
+    gen_server:call(mobile_agent:full_local_name("pingagent"), {mobility, register}).
 
 %% gen_server callbacks
 
@@ -83,10 +83,10 @@ ams_register_acl() ->
                 name=#'agent-identifier'{name = <<"pingagent2">>, 
                                          addresses=[<<"http://127.0.0.1:7778">>]}}},
     PingMsg = #aclmessage{sender = pingagent,
-                          receiver = Dest,
+                          receiver = ams,
                           content = Content,
                           ontology = ?FIPA_AGENT_MANAGEMENT,
                           protocol = <<"fipa-request">>
                          },
-    io:format(acl:request(PingMsg)).
+    io:format("acl request ~p~n", [acl:request(PingMsg)]).
 

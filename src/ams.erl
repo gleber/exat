@@ -36,7 +36,7 @@
 -module(ams).
 
 -export([de_register_agent/1, get_registered_agents/0,
-         register_agent/1, start_link/0]).
+         register_agent/1, start_link/0, get_migration_parameters/2]).
 
 -behaviour(agent).
 
@@ -48,7 +48,7 @@
 
 -include_lib("exat/include/fipa_ontology.hrl").
 
--record(state, {}).
+-record(state, {migration_requests=[], migration_id=0}).
 
 handle_acl(#aclmessage{speechact = 'REQUEST',
                        ontology = ?FIPA_AGENT_MANAGEMENT,
@@ -64,6 +64,27 @@ handle_acl(#aclmessage{speechact = 'REQUEST',
             lists:foreach(F, L);
         C -> F(C)
     end,
+    {noreply, State};
+
+handle_acl(#aclmessage{speechact = 'QUERY-REF', content = <<"migration", Agent/binary>>} = Message, 
+           State) ->
+    [_ , Host] = re:split(Agent, "@"),
+    Node = binary_to_atom(re:replace(Host, ":", "@", [{return, binary}]), utf8),
+    Content = case net_adm:ping(Node) of
+        pong ->
+            io:format("in erlang cluster~n"),
+            MyNode = atom_to_binary(node(), utf8),
+            <<"migration", "erl", MyNode/binary>>;
+        _ ->
+            io:format("not in cluster"),
+            Port = proc_mobility:get_tcp_server_port(),
+            <<"migration", "tcp", Port/integer>>
+    end,
+    acl:reply(Message, 'INFORM', Content),
+    {noreply, State};
+
+handle_acl(#aclmessage{speechact = 'INFORM', content = <<"migration", Parameters/binary>>, 'conversation-id' = ConvId}, State) ->
+    io:format("parameters ~p ~p~n", [Parameters, ConvId]),
     {noreply, State}.
 
 prepare_reply(Content = #action{'1' = #'get-description'{}}) ->
@@ -87,7 +108,9 @@ prepare_reply(Content = #action{'1' = #search{'0' = #'ams-agent-description'{}}}
                     || X <- Agents],
     #result{'0' = Content, '1' = Descriptions};
 prepare_reply(Content = #action{'1' = #register{name = Agent}}) ->
-    logger:log('AMS', "register"),
+    AgentName = Agent#'agent-identifier'.name,
+    Addrs = Agent#'agent-identifier'.addresses,
+    seresye:assert(agent_registry, {agent, AgentName, nil, Addrs}),
     #result{'0' = Content, '1' = Agent}.
 
 %%====================================================================
@@ -109,6 +132,15 @@ handle_call({register, Agent, Pid, Addrs}, _From, State) ->
     Ref = erlang:monitor(process, Pid),
     seresye:assert(agent_registry, {agent, Agent, Ref, Addrs}),
     {reply, ok, State};
+
+handle_call({migration, AgentName, Destination}, From, State) ->
+    Dest = #'agent-identifier'{name = <<"ams">>, addresses=[Destination]},
+    AgentNameB = atom_to_binary(AgentName, utf8),
+    acl:query_ref(#aclmessage{sender = ams,
+                  receiver = Dest,
+                  'conversation-id' = list_to_binary(integer_to_list(0)),
+                  content = <<"migration", AgentNameB/bitstring>>}),
+    {reply, error, State};
 
 handle_call(Call, _From, State) ->
     {reply, {error, unknown_call, Call}, State}.
@@ -165,3 +197,6 @@ get_registered_agents() ->
     PlatformName = exat:current_platform(),
     [lists:flatten([atom_to_list(X), "@", PlatformName])
      || X <- AgentLocalNames].
+
+get_migration_parameters(Agent, Destination) ->
+    agent:call(ams, {migration, Agent, Destination}).

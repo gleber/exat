@@ -19,7 +19,7 @@ start() ->
 	application:start(gproc),
 	application:start(proc_mobility),
     agent:new(pingeragent, ?MODULE,
-              [{"localhost", 7778, <<"pingagent">>}]).
+              [{"localhost", 7778, <<"pingagent@a:michal">>}]).
 
 stop() -> agent:stop(pingeragent).
 
@@ -45,11 +45,11 @@ handle_call(Call, _From, State) ->
 handle_cast(_Call, State) -> {noreply, State}.
 
 handle_info(ping, {SelfName, DestAgent} = State) ->
-	io:format("ping~n"),
+    io:format("ping ~p ~n", [DestAgent]),
     {Ip, Port, Name} = DestAgent,
     Addr = list_to_binary(lists:flatten(io_lib:format("http://~s:~b",
                                        [Ip, Port]))),
-	io:format("addr ~p~n", [Addr]),
+    io:format("addr ~p~n", [Addr]),
     Dest = #'agent-identifier'{name = Name,
                                addresses = [Addr]},
     PingMsg = #aclmessage{sender = SelfName,
