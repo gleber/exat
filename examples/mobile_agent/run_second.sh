@@ -5,7 +5,7 @@ erl -pa examples/mobile_agent -pa ebin/ -pa lib/*/ebin/ -pa ../../ebin/ -boot st
     -http_port 7779 \
     -config examples/mobile_agent/mobility \
     -sname b \
-    -other_node a@michal \
+    -m_tcp_port 1806 \
     -start mobile_pingeragent $*
 
     # -eval "t:t(agent)." \

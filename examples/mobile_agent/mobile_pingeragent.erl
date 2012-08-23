@@ -14,14 +14,12 @@
 %%API
 
 start() ->
-	{ok, [[OtherNode]]} = init:get_argument(other_node),
-	net_adm:ping(list_to_atom(OtherNode)),
-	application:start(gproc),
-	application:start(proc_mobility),
-    agent:new(pingeragent, ?MODULE,
+    application:start(gproc),
+    application:start(proc_mobility),
+    agent:new(agent:full_local_name("pingeragent"), ?MODULE,
               [{"localhost", 7778, <<"pingagent@a:michal">>}]).
 
-stop() -> agent:stop(pingeragent).
+stop() -> agent:stop(agent:full_local_name("pingeragent")).
 
 %%agents callback
 handle_acl(#aclmessage{speechact = 'INFORM',

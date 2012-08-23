@@ -83,8 +83,13 @@ handle_acl(#aclmessage{speechact = 'QUERY-REF', content = <<"migration", Agent/b
     acl:reply(Message, 'INFORM', Content),
     {noreply, State};
 
-handle_acl(#aclmessage{speechact = 'INFORM', content = <<"migration", Parameters/binary>>, 'conversation-id' = ConvId}, State) ->
-    io:format("parameters ~p ~p~n", [Parameters, ConvId]),
+handle_acl(#aclmessage{speechact = 'INFORM', content = <<"migration", Parameters/binary>>, 'conversation-id' = ConvId}, #state{migration_requests=Requests}=State) ->
+    ConvIdI = list_to_integer(binary_to_list(ConvId)),
+    Caller = proplists:get_value(ConvIdI, Requests),
+    gen_server:reply(Caller, Parameters),
+    {noreply, State#state{migration_requests=proplists:delete(ConvIdI, Requests)}};
+handle_acl(Message, State) ->
+    io:format("unknown message!~p ~n", [Message]),
     {noreply, State}.
 
 prepare_reply(Content = #action{'1' = #'get-description'{}}) ->
@@ -133,14 +138,14 @@ handle_call({register, Agent, Pid, Addrs}, _From, State) ->
     seresye:assert(agent_registry, {agent, Agent, Ref, Addrs}),
     {reply, ok, State};
 
-handle_call({migration, AgentName, Destination}, From, State) ->
+handle_call({migration, AgentName, Destination}, From, #state{migration_id = MId, migration_requests=Requests} = State) ->
     Dest = #'agent-identifier'{name = <<"ams">>, addresses=[Destination]},
     AgentNameB = atom_to_binary(AgentName, utf8),
     acl:query_ref(#aclmessage{sender = ams,
                   receiver = Dest,
                   'conversation-id' = list_to_binary(integer_to_list(0)),
                   content = <<"migration", AgentNameB/bitstring>>}),
-    {reply, error, State};
+    {noreply, State#state{migration_id = MId+1, migration_requests = [{MId,From} | Requests]}};
 
 handle_call(Call, _From, State) ->
     {reply, {error, unknown_call, Call}, State}.
@@ -200,3 +205,4 @@ get_registered_agents() ->
 
 get_migration_parameters(Agent, Destination) ->
     agent:call(ams, {migration, Agent, Destination}).
+

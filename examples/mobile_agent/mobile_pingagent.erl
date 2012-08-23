@@ -57,6 +57,7 @@ register() ->
 %% gen_server callbacks
 
 init(Name, [{saved_state, State}]) ->
+    proc_mobility:register_name(Name, self()),
     {ok, State};
 
 init(Name, _Params) ->

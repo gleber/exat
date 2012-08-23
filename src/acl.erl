@@ -168,7 +168,8 @@ sendacl(Message) ->
                                                   receiver = Receivers,
                                                   content = iolist_to_binary(EncodedContent)}),
     TransformedMessage = list_to_tuple(Temp),
-    [mtp:http_mtp_encode_and_send(X, Sender, TransformedMessage) || X <- Receivers],
+    [spawn(fun() -> 
+        mtp:http_mtp_encode_and_send(X, Sender, TransformedMessage) end) || X <- Receivers],
     ok.
 
 inform(Message) ->

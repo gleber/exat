@@ -139,14 +139,18 @@ decode_and_forward_acl(Req, _, _, Message,
     LocalReceivers = [V1 || V1 <- Receivers,
                             is_local(V1, CurrentPlatform)],
     MessagesToSend = [ ParsedMessage#aclmessage{receiver = X} || X <- LocalReceivers],
-    %%io:format ("Parsed Message = ~w~n", [MessagesToSend]),
+    LocalAms = agent:full_local_name("ams"),
+    %%io:format ("Message = ~p~n", [MessagesToSend]),
     lists:foreach(fun (X) ->
-                          Receiver = (X#aclmessage.receiver)#'agent-identifier'.name,
-                          %%{ID, _} = exat:split_agent_identifier(Receiver),
-                          %%io:format ("Recv = ~w~n", [Receiver]),
-                          gen_server:call(binary_to_atom(Receiver, utf8), [acl_erl_native, X])
-                  end,
-                  MessagesToSend),
+                Receiver = case binary_to_atom((X#aclmessage.receiver)#'agent-identifier'.name, utf8) of
+                    LocalAms ->
+                        ams;
+                    ReceiverB -> ReceiverB
+                end,
+                %%{ID, _} = exat:split_agent_identifier(Receiver),
+                %%io:format ("Recv = ~w~n", [Receiver]),
+                gen_server:call(Receiver, [acl_erl_native, X])
+        end, MessagesToSend),
     ?OK_RESPONSE;
 decode_and_forward_acl(Req, _, _, _, _) ->
     ?BAD_RESPONSE.
@@ -159,7 +163,6 @@ is_local(X, CurrentPlatform) ->
 %% Func: http_mtp_encode_and_send/1
 %%====================================================================
 http_mtp_encode_and_send(To, From, Message) ->
-    %% io:format ("Message ~w~n", [Message]),
     XX = fipa_ontology_sl_codec:encode(Message),
     %% io:format ("XX ~w~n", [XX]),
     ACL = sl:encode(XX),

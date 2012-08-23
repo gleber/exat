@@ -44,10 +44,11 @@ new_with_state(AgentName, Callback, State) ->
 
 handle_call({mobility, send_me, Destination}, _From, State) ->
 %% 	code:get_object_code(State#agent_state.callback)
-    case ams:get_migration_parameters(State#agent_state.name, Destination) of
+    Params = ams:get_migration_parameters(State#agent_state.name, Destination),
+    case interprete_params(Params, Destination) of
         {ok, PMSAddr} ->
             State0 = {State#agent_state.name, State#agent_state.callback, State#agent_state.int_state},
-            case proc_mobility:migrate(State#agent_state.name, #mproc_state{module=State#agent_state.callback, state=State0, code=[]}, PMSAddr) of
+            case proc_mobility:migrate(#mproc_state{name=State#agent_state.name, module=State#agent_state.callback, state=State0, code=[]}, PMSAddr) of
                 ok ->
                     {stop, normal, ok, State};
                 Result -> 
@@ -66,6 +67,13 @@ handle_call({mobility, register}, _From, State) ->
 handle_call(Request, From, State) ->
 	agent:handle_call(Request, From, State).
 
+
+interprete_params(<<"erl", Node/binary>>, _) -> {ok, binary_to_atom(Node, utf8)};
+interprete_params(<<"tcp", Port/binary>>, Dest) -> 
+    {match, [_, HostP]} = re:run(Dest, "http://(.*[^:]):*[0-9]*"),
+    Host = binary:part(Dest, HostP),
+    {ok,{tcp, Host, list_to_integer(binary_to_list(Port))}};
+interprete_params(_, _) -> error.
 %%
 %% Local Functions
 %%
