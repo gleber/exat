@@ -36,7 +36,7 @@
 -module(ams).
 
 -export([de_register_agent/1, get_registered_agents/0,
-         register_agent/1, start_link/0, get_migration_parameters/2]).
+         register_agent/1, register_agent/2, register_agent/3, start_link/0, get_migration_parameters/2]).
 
 -behaviour(agent).
 
@@ -48,7 +48,7 @@
 
 -include_lib("exat/include/fipa_ontology.hrl").
 
--record(state, {migration_requests=[], migration_id=0}).
+-record(state, {migration_requests=[], migration_id=0, nodes=[]}).
 
 handle_acl(#aclmessage{speechact = 'REQUEST',
                        ontology = ?FIPA_AGENT_MANAGEMENT,
@@ -67,21 +67,27 @@ handle_acl(#aclmessage{speechact = 'REQUEST',
     {noreply, State};
 
 handle_acl(#aclmessage{speechact = 'QUERY-REF', content = <<"migration", Agent/binary>>} = Message, 
-           State) ->
+           #state{nodes = Nodes} = State) ->
     [_ , Host] = re:split(Agent, "@"),
     Node = binary_to_atom(re:replace(Host, ":", "@", [{return, binary}]), utf8),
-    Content = case net_adm:ping(Node) of
+    {Content, State1} = case net_adm:ping(Node) of
         pong ->
             io:format("in erlang cluster~n"),
             MyNode = atom_to_binary(node(), utf8),
-            <<"migration", "erl", MyNode/binary>>;
+            State0 = case lists:member(Node, Nodes) of
+                false -> %%refresh gproc, join to cluster
+                    catch exit(whereis(gproc_dist), kill),
+                    State#state{nodes = [Node | Nodes]};
+                _ -> State
+            end,
+            {<<"migration", "erl", MyNode/binary>>, State0};
         _ ->
             io:format("not in cluster"),
             Port = proc_mobility:get_tcp_server_port(),
-            <<"migration", "tcp", Port/integer>>
+            {<<"migration", "tcp", Port/integer>>, State}
     end,
     acl:reply(Message, 'INFORM', Content),
-    {noreply, State};
+    {noreply, State1};
 
 handle_acl(#aclmessage{speechact = 'INFORM', content = <<"migration", Parameters/binary>>, 'conversation-id' = ConvId}, #state{migration_requests=Requests}=State) ->
     ConvIdI = list_to_integer(binary_to_list(ConvId)),
@@ -104,9 +110,7 @@ prepare_reply(Content = #action{'1' = #'get-description'{}}) ->
 
 prepare_reply(Content = #action{'1' = #search{'0' = #'ams-agent-description'{}}}) ->
     logger:log('AMS', "search ams-agent-description"),
-    Agents = [#'agent-identifier'{name = X,
-                                  addresses = mtp:addresses()}
-              || X <- ams:get_registered_agents()],
+    Agents = ams:get_registered_agents(),
     Descriptions = [#'ams-agent-description'{name = X,
                                              ownership = "NONE",
                                              state = "active"}
@@ -153,8 +157,9 @@ handle_call(Call, _From, State) ->
 handle_cast(Cast, State) ->
     {reply, {error, unknown_cast, Cast}, State}.
 
-handle_info({'DOWN', Ref, process, _Pid, _}, State) ->
-    seresye:retract_match(agent_registry, {agent, '_', Ref, '_'}),
+handle_info({'DOWN', Ref, process, _Pid, _} = Msg, State) ->
+    io:format("agent down ~p ~p~n", [Msg, seresye:query_kb(agent_registry, {agent, '_', Ref, '_'})]),
+    io:format("retract match ~p~n", [seresye:retract_match(agent_registry, {agent, '_', Ref, '_'})]),
     {noreply, State};
 
 handle_info(_Msg, State) ->
@@ -177,7 +182,7 @@ register_agent(AgentName) ->
 %% Returns: ok.
 %%====================================================================
 register_agent(AgentName, Pid) when is_pid(Pid) ->
-    register_agent(AgentName, [], Pid);
+    register_agent(AgentName, mtp:addresses(), Pid);
 register_agent(AgentName, Addresses) ->
     register_agent(AgentName, Addresses, self()).
 
@@ -196,12 +201,16 @@ de_register_agent(AgentName) ->
 %% Returns: [string()].
 %%====================================================================
 get_registered_agents() ->
+    get_registered_agents('_').
+
+get_registered_agents(AgentName) ->
     AgentList = seresye:query_kb(agent_registry,
-                                 {agent, '_', '_', '_'}),
-    AgentLocalNames = [X || {_, X, _, _} <- AgentList],
-    PlatformName = exat:current_platform(),
-    [lists:flatten([atom_to_list(X), "@", PlatformName])
-     || X <- AgentLocalNames].
+                                 {agent, AgentName, '_', '_'}),
+    [#'agent-identifier'{name = X, addresses = Y} || {_, X, _, Y} <- AgentList].
+    %%PlatformName = exat:current_platform(),
+    %%[lists:flatten([atom_to_list(X), "@", PlatformName])
+    %% || X <- AgentLocalNames].
+
 
 get_migration_parameters(Agent, Destination) ->
     agent:call(ams, {migration, Agent, Destination}).

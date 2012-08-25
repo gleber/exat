@@ -42,14 +42,18 @@ new_with_state(AgentName, Callback, State) ->
 %% Gen Server 
 %% ====================================================================
 
-handle_call({mobility, send_me, Destination}, _From, State) ->
+handle_call({mobility, send_me, Destination}, _From, 
+            #agent_state{name = AgentName, callback = Callback, int_state = IntState} = State) ->
 %% 	code:get_object_code(State#agent_state.callback)
     Params = ams:get_migration_parameters(State#agent_state.name, Destination),
     case interprete_params(Params, Destination) of
         {ok, PMSAddr} ->
-            State0 = {State#agent_state.name, State#agent_state.callback, State#agent_state.int_state},
-            case proc_mobility:migrate(#mproc_state{name=State#agent_state.name, module=State#agent_state.callback, state=State0, code=[]}, PMSAddr) of
+            State0 = {AgentName, Callback, IntState},
+            case proc_mobility:migrate(#mproc_state{name=AgentName, module=Callback, state=State0, code=[]}, PMSAddr) of
                 ok ->
+                    %% TODO wait for old agent termination and register again under new address
+                    NewPid = proc_mobility:whereis_name(AgentName),
+                    ams:register_agent(AgentName, [Destination], NewPid),
                     {stop, normal, ok, State};
                 Result -> 
                     {reply, Result, State}
@@ -58,23 +62,21 @@ handle_call({mobility, send_me, Destination}, _From, State) ->
             {reply, {error, "Cannot migrate to given destination"}, State}
     end;
 
-
 handle_call({mobility, register}, _From, State) ->
-	true = proc_mobility:register_name(State#agent_state.name, self()),
-	{reply, {ok, self()}, State};
+    true = proc_mobility:register_name(State#agent_state.name, self()),
+    {reply, {ok, self()}, State};
 
 
 handle_call(Request, From, State) ->
-	agent:handle_call(Request, From, State).
+    agent:handle_call(Request, From, State).
 
-
+%%
+%% Local Functions
+%%
 interprete_params(<<"erl", Node/binary>>, _) -> {ok, binary_to_atom(Node, utf8)};
 interprete_params(<<"tcp", Port/binary>>, Dest) -> 
     {match, [_, HostP]} = re:run(Dest, "http://(.*[^:]):*[0-9]*"),
     Host = binary:part(Dest, HostP),
     {ok,{tcp, Host, list_to_integer(binary_to_list(Port))}};
 interprete_params(_, _) -> error.
-%%
-%% Local Functions
-%%
 

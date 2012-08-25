@@ -113,7 +113,7 @@ terminate(Reason,
           #agent_state{callback = Callback, name = AgentName,
                  int_state = IntState} =
               _State) ->
-    ams:de_register_agent(AgentName),
+    ams:de_register_agent(AgentName), 
     ok = Callback:terminate(Reason, IntState),
     ok.
 
