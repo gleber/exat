@@ -35,7 +35,7 @@
 
 -module(ams).
 
--export([de_register_agent/1, get_registered_agents/0,
+-export([de_register_agent/1, get_registered_agents/0, get_registered_agents/1,
          register_agent/1, register_agent/2, register_agent/3, start_link/0, get_migration_parameters/2]).
 
 -behaviour(agent).
@@ -158,8 +158,7 @@ handle_cast(Cast, State) ->
     {reply, {error, unknown_cast, Cast}, State}.
 
 handle_info({'DOWN', Ref, process, _Pid, _} = Msg, State) ->
-    io:format("agent down ~p ~p~n", [Msg, seresye:query_kb(agent_registry, {agent, '_', Ref, '_'})]),
-    io:format("retract match ~p~n", [seresye:retract_match(agent_registry, {agent, '_', Ref, '_'})]),
+    seresye:retract_match(agent_registry, {agent, '_', Ref, '_'}),
     {noreply, State};
 
 handle_info(_Msg, State) ->

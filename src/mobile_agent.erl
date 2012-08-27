@@ -52,8 +52,17 @@ handle_call({mobility, send_me, Destination}, _From,
             case proc_mobility:migrate(#mproc_state{name=AgentName, module=Callback, state=State0, code=[]}, PMSAddr) of
                 ok ->
                     %% TODO wait for old agent termination and register again under new address
-                    NewPid = proc_mobility:whereis_name(AgentName),
-                    ams:register_agent(AgentName, [Destination], NewPid),
+                    MyselfPid = self(),
+                    spawn(fun() ->
+                                erlang:monitor(process, MyselfPid),
+                                receive
+                                    {'DOWN', _, _, MyselfPid, _} -> %%agent died and deregistered
+                                        NewPid = proc_mobility:whereis_name(AgentName),
+                                        ams:register_agent(AgentName, [Destination], NewPid)
+                                after 3000 ->
+                                        io:format("sth went wrong, didn't get DOWN message!")
+                                end
+                        end),
                     {stop, normal, ok, State};
                 Result -> 
                     {reply, Result, State}

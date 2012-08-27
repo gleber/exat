@@ -142,14 +142,27 @@ decode_and_forward_acl(Req, _, _, Message,
     LocalAms = agent:full_local_name("ams"),
     %%io:format ("Message = ~p~n", [MessagesToSend]),
     lists:foreach(fun (X) ->
-                Receiver = case binary_to_atom((X#aclmessage.receiver)#'agent-identifier'.name, utf8) of
+                AgentName = (X#aclmessage.receiver)#'agent-identifier'.name,
+                Receiver = case binary_to_atom(AgentName, utf8) of
                     LocalAms ->
                         ams;
                     ReceiverB -> ReceiverB
                 end,
                 %%{ID, _} = exat:split_agent_identifier(Receiver),
                 %%io:format ("Recv = ~w~n", [Receiver]),
-                gen_server:call(Receiver, [acl_erl_native, X])
+                case whereis(Receiver) of 
+                    undefined ->
+                        case ams:get_registered_agents(Receiver) of
+                            [] ->
+                                io:format("There isn't agent ~p~n", [Receiver]);
+                            [#'agent-identifier'{name = Receiver, addresses = Addrs} = Receiver2 | _ ] ->
+                                X2 = X#aclmessage{receiver = Receiver2#'agent-identifier'{name=AgentName}},
+                                %%spawn(fun() -> acl:sendacl(X2) end)
+                                gen_server:call({via, proc_mobility, Receiver}, [acl_erl_native, X2])
+                        end;
+                    _ ->
+                        gen_server:call(Receiver, [acl_erl_native, X])
+                end
         end, MessagesToSend),
     ?OK_RESPONSE;
 decode_and_forward_acl(Req, _, _, _, _) ->
