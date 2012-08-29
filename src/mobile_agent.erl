@@ -51,7 +51,6 @@ handle_call({mobility, send_me, Destination}, _From,
             State0 = {AgentName, Callback, IntState},
             case proc_mobility:migrate(#mproc_state{name=AgentName, module=Callback, state=State0, code=[]}, PMSAddr) of
                 ok ->
-                    %% TODO wait for old agent termination and register again under new address
                     MyselfPid = self(),
                     spawn(fun() ->
                                 erlang:monitor(process, MyselfPid),
@@ -84,8 +83,9 @@ handle_call(Request, From, State) ->
 %%
 interprete_params(<<"erl", Node/binary>>, _) -> {ok, binary_to_atom(Node, utf8)};
 interprete_params(<<"tcp", Port/binary>>, Dest) -> 
-    {match, [_, HostP]} = re:run(Dest, "http://(.*[^:]):*[0-9]*"),
+    {match, [_, HostP]} = re:run(Dest, "http://([a-zA-Z0-9\.]*):*[-9]*"),
+    io:format("dest ~p host ~p~n", [Dest, HostP]),
     Host = binary:part(Dest, HostP),
-    {ok,{tcp, Host, list_to_integer(binary_to_list(Port))}};
+    {ok,{tcp, binary_to_list(Host), list_to_integer(binary_to_list(Port))}};
 interprete_params(_, _) -> error.
 

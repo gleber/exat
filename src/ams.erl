@@ -83,8 +83,8 @@ handle_acl(#aclmessage{speechact = 'QUERY-REF', content = <<"migration", Agent/b
             {<<"migration", "erl", MyNode/binary>>, State0};
         _ ->
             io:format("not in cluster"),
-            Port = proc_mobility:get_tcp_server_port(),
-            {<<"migration", "tcp", Port/integer>>, State}
+            Port = list_to_binary(integer_to_list(proc_mobility:get_tcp_server_port())),
+            {<<"migration", "tcp", Port/binary>>, State}
     end,
     acl:reply(Message, 'INFORM', Content),
     {noreply, State1};
