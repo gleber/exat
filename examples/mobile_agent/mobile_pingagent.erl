@@ -3,13 +3,13 @@
 -behaviour(mobile_agent).
 -behaviour(mobile_proc).
 
--export([start/0, stop/0]). % API
+-export([start/0, start/1, stop/0]). % API
 
 -export([code_change/3, handle_acl/2, handle_call/3,
          handle_cast/2, handle_info/2, init/2, terminate/2, ams_register_acl/0]).
 
 %% mobile_proc callbacks
--export([init_state/1, send_me/1, register/0]).
+-export([init_state/1, send_me/1]).
 
 -include("acl.hrl").
 
@@ -17,11 +17,13 @@
 
 %%API
 
-start() -> 
+start() -> start("").
+
+start(N) when is_integer(N) -> start(integer_to_list(N));
+start(N) -> 
 	application:start(gproc),
 	application:start(proc_mobility),
-    mobile_agent:new(agent:full_local_name("pingagent"), ?MODULE, []),
-	register().
+    mobile_agent:new(agent:full_local_name("pingagent"++N), ?MODULE, []).
 
 stop() -> mobile_agent:stop(pingagent).
 
@@ -51,8 +53,6 @@ init_state({AgentName, Callback, State}) ->
 send_me(Destination) ->
     gen_server:call(mobile_agent:full_local_name("pingagent"), {mobility, send_me, Destination}).
 
-register() ->
-    gen_server:call(mobile_agent:full_local_name("pingagent"), {mobility, register}).
 
 %% gen_server callbacks
 
@@ -61,6 +61,7 @@ init(Name, [{saved_state, State}]) ->
     {ok, State};
 
 init(Name, _Params) ->
+    proc_mobility:register_name(Name, self()),
     {ok, {Name, 0}}.
 
 

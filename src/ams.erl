@@ -147,7 +147,7 @@ handle_call({migration, AgentName, Destination}, From, #state{migration_id = MId
     AgentNameB = atom_to_binary(AgentName, utf8),
     acl:query_ref(#aclmessage{sender = ams,
                   receiver = Dest,
-                  'conversation-id' = list_to_binary(integer_to_list(0)),
+                  'conversation-id' = list_to_binary(integer_to_list(MId)),
                   content = <<"migration", AgentNameB/bitstring>>}),
     {noreply, State#state{migration_id = MId+1, migration_requests = [{MId,From} | Requests]}};
 
