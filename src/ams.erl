@@ -72,7 +72,7 @@ handle_acl(#aclmessage{speechact = 'QUERY-REF', content = <<"migration", Agent/b
     Node = binary_to_atom(re:replace(Host, ":", "@", [{return, binary}]), utf8),
     {Content, State1} = case net_adm:ping(Node) of
         pong ->
-            io:format("in erlang cluster~n"),
+            %%io:format("in erlang cluster~n"),
             MyNode = atom_to_binary(node(), utf8),
             State0 = case lists:member(Node, Nodes) of
                 false -> %%refresh gproc, join to cluster
@@ -82,7 +82,7 @@ handle_acl(#aclmessage{speechact = 'QUERY-REF', content = <<"migration", Agent/b
             end,
             {<<"migration", "erl", MyNode/binary>>, State0};
         _ ->
-            io:format("not in cluster"),
+            %%io:format("not in cluster"),
             Port = list_to_binary(integer_to_list(proc_mobility:get_tcp_server_port())),
             {<<"migration", "tcp", Port/binary>>, State}
     end,

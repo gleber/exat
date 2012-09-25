@@ -27,7 +27,7 @@
 %%
 
 new(AgentName, Callback, Parameters) ->
-    io:format("mobile agent cretion ~p ~p ~p ~p", [AgentName, atom_to_list(AgentName), Callback, Parameters]),
+    %%io:format("mobile agent cretion ~p ~p ~p ~p", [AgentName, atom_to_list(AgentName), Callback, Parameters]),
     {match, _} = re:run(atom_to_list(AgentName), "@"),
     gen_server:start({local, AgentName},
                      mobile_agent, [AgentName, Callback, Parameters],
@@ -84,7 +84,7 @@ handle_call(Request, From, State) ->
 interprete_params(<<"erl", Node/binary>>, _) -> {ok, binary_to_atom(Node, utf8)};
 interprete_params(<<"tcp", Port/binary>>, Dest) -> 
     {match, [_, HostP]} = re:run(Dest, "http://([a-zA-Z0-9\.]*):*[-9]*"),
-    io:format("dest ~p host ~p~n", [Dest, HostP]),
+    %%io:format("dest ~p host ~p~n", [Dest, HostP]),
     Host = binary:part(Dest, HostP),
     {ok,{tcp, binary_to_list(Host), list_to_integer(binary_to_list(Port))}};
 interprete_params(_, _) -> error.

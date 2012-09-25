@@ -156,7 +156,7 @@ handle_call([acl_erl_native, Acl], _From,
 handle_call(Call, From,
             #agent_state{int_state = IntState, callback = Callback} =
                 State) ->
-    io:format("~p ~p~n", [From, Call]),
+    %%io:format("~p ~p~n", [From, Call]),
     R = Callback:handle_call(Call, From, IntState),
     IntState2 = element(size(R), R),
     setelement(size(R), R,
