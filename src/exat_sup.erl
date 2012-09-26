@@ -72,18 +72,19 @@ start_link() ->
 %%====================================================================
 
 init([]) ->
-    case init:get_argument(http_port) of
-        {ok, [[ThePort]]} -> Port = list_to_integer(ThePort);
-        _ -> Port = (?DEFAULT_PORT)
+    Port = case init:get_argument(http_port) of
+        {ok, [[ThePort]]} -> list_to_integer(ThePort);
+        _ -> (?DEFAULT_PORT)
     end,
     {ok, _Pid} = seresye:start(agent_registry),
+    AgentRegistryTid = ets:new(agent_registry, [bag, public]),
     MTP = {exat_platform, {exat_server, start_link, [Port]},
            permanent, brutal_kill, supervisor, [exat_server]},
     MTP_SENDER = {mtp_sender_service,
                   {gen_server, start_link,
                    [{local, mtp_sender}, mtp, [], []]},
                   permanent, brutal_kill, worker, [ontology_service]},
-    AMS = {exat_ams, {ams, start_link, []}, permanent,
+    AMS = {exat_ams, {ams, start_link, [AgentRegistryTid]}, permanent,
            brutal_kill, worker, [ams]},
     ONTO = {ontology_service,
             {gen_server, start_link,

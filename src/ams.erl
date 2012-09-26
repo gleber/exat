@@ -36,7 +36,7 @@
 -module(ams).
 
 -export([de_register_agent/1, get_registered_agents/0, get_registered_agents/1,
-         register_agent/1, register_agent/2, register_agent/3, start_link/0, get_migration_parameters/2]).
+         register_agent/1, register_agent/2, register_agent/3, start_link/1, get_migration_parameters/2]).
 
 -behaviour(agent).
 
@@ -48,7 +48,7 @@
 
 -include_lib("exat/include/fipa_ontology.hrl").
 
--record(state, {migration_requests=[], migration_id=0, nodes=[]}).
+-record(state, {agent_registry, migration_requests=[], migration_id=0, nodes=[]}).
 
 handle_acl(#aclmessage{speechact = 'REQUEST',
                        ontology = ?FIPA_AGENT_MANAGEMENT,
@@ -126,20 +126,21 @@ prepare_reply(Content = #action{'1' = #register{name = Agent}}) ->
 %% Func: start_link/0
 %% Returns: {ok, Pid}.
 %%====================================================================
-start_link() ->
-    agent:new(ams, ams, [{behaviour, ams}, no_register]).
+start_link(AgentRegistry) ->
+    agent:new(ams, ams, [AgentRegistry, {behaviour, ams}, no_register]).
 
-init(ams, _Params) ->
+init(ams, [AgentRegistry | _Params]) ->
     logger:start('AMS'),
     logger:log('AMS', "Staring AMS."),
     ontology_service:register_codec(?FIPA_AGENT_MANAGEMENT,
                                     fipa_ontology_sl_codec),
-    {ok, #state{}}.
+    {ok, #state{agent_registry=AgentRegistry}}.
 
 
-handle_call({register, Agent, Pid, Addrs}, _From, State) ->
+handle_call({register, Agent, Pid, Addrs}, _From, #state{agent_registry=Registry} = State) ->
     Ref = erlang:monitor(process, Pid),
-    seresye:assert(agent_registry, {agent, Agent, Ref, Addrs}),
+    %%seresye:assert(agent_registry, {agent, Agent, Ref, Addrs}),
+    ets:insert(Registry, {Agent, Ref, Addrs}),
     {reply, ok, State};
 
 handle_call({migration, AgentName, Destination}, From, #state{migration_id = MId, migration_requests=Requests} = State) ->
@@ -151,14 +152,22 @@ handle_call({migration, AgentName, Destination}, From, #state{migration_id = MId
                   content = <<"migration", AgentNameB/bitstring>>}),
     {noreply, State#state{migration_id = MId+1, migration_requests = [{MId,From} | Requests]}};
 
+handle_call({registered_agents, AgentName}, _From, #state{agent_registry = Registry} = State) ->
+    {reply, ets:match_object(Registry,{AgentName, '_','_'}), State};
+
+handle_call({deregister, AgentName}, _From, #state{agent_registry = Registry} = State) ->
+    {reply, ets:match_delete(Registry, {AgentName, '_', '_'})};
+
 handle_call(Call, _From, State) ->
     {reply, {error, unknown_call, Call}, State}.
 
 handle_cast(Cast, State) ->
     {reply, {error, unknown_cast, Cast}, State}.
 
-handle_info({'DOWN', Ref, process, _Pid, _} = Msg, State) ->
-    seresye:retract_match(agent_registry, {agent, '_', Ref, '_'}),
+handle_info({'DOWN', Ref, process, _Pid, _} = Msg, #state{agent_registry=Registry} = State) ->
+    %%seresye:retract_match(agent_registry, {agent, '_', Ref, '_'}),
+    %%io:format("~p ~p ~p~n", [Ref, ets:tab2list(Registry), ets:match_object(Registry, {'_', Ref, '_'})]),
+    ets:match_delete(Registry, {'_', Ref, '_'}),
     {noreply, State};
 
 handle_info(_Msg, State) ->
@@ -193,7 +202,8 @@ register_agent(AgentName, Addresses, Pid) ->
 %% Returns: ok.
 %%====================================================================
 de_register_agent(AgentName) ->
-    seresye:retract_match(agent_registry, {agent, AgentName, '_', '_'}).
+    %%seresye:retract_match(agent_registry, {agent, AgentName, '_', '_'}).
+    agent:call(ams, {deregister, AgentName}).
 
 %%====================================================================
 %% Func: get_registered_agents/0
@@ -203,9 +213,10 @@ get_registered_agents() ->
     get_registered_agents('_').
 
 get_registered_agents(AgentName) ->
-    AgentList = seresye:query_kb(agent_registry,
-                                 {agent, AgentName, '_', '_'}),
-    [#'agent-identifier'{name = X, addresses = Y} || {_, X, _, Y} <- AgentList].
+    %AgentList = seresye:query_kb(agent_registry,
+    %                             {agent, AgentName, '_', '_'}),
+    AgentList = agent:call(ams, {registered_agents, AgentName}),
+    [#'agent-identifier'{name = X, addresses = Y} || {X, _, Y} <- AgentList].
     %%PlatformName = exat:current_platform(),
     %%[lists:flatten([atom_to_list(X), "@", PlatformName])
     %% || X <- AgentLocalNames].
