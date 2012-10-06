@@ -139,7 +139,6 @@ init(ams, [AgentRegistry | _Params]) ->
 
 handle_call({register, Agent, Pid, Addrs}, _From, #state{agent_registry=Registry} = State) ->
     Ref = erlang:monitor(process, Pid),
-    %%seresye:assert(agent_registry, {agent, Agent, Ref, Addrs}),
     ets:insert(Registry, {Agent, Ref, Addrs}),
     {reply, ok, State};
 
@@ -156,7 +155,7 @@ handle_call({registered_agents, AgentName}, _From, #state{agent_registry = Regis
     {reply, ets:match_object(Registry,{AgentName, '_','_'}), State};
 
 handle_call({deregister, AgentName}, _From, #state{agent_registry = Registry} = State) ->
-    {reply, ets:match_delete(Registry, {AgentName, '_', '_'})};
+    {reply, ets:delete(Registry, AgentName), State};
 
 handle_call(Call, _From, State) ->
     {reply, {error, unknown_call, Call}, State}.

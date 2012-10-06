@@ -6,7 +6,7 @@ erl +P 1001000 -pa examples/mobile_agent -pa ebin/ -pa lib/*/ebin/ -pa ../../ebi
     -s exat_app \
     -http_port 7778 \
     -config examples/mobile_agent/mobility \
-    -name a@192.168.1.101 \
+    -name a@192.168.1.103 \
     -setcookie ABCD \
     -start mobile_pingagent $*
 
