@@ -15,9 +15,9 @@
 
 start() ->
     application:start(gproc),
-    application:start(proc_mobility),
-    agent:new(agent:full_local_name("pingeragent"), ?MODULE,
-              [{"localhost", 7778, <<"pingagent@a:michal">>}]).
+    application:start(proc_mobility), 
+    agent:start_link(agent:full_local_name("pingeragent"), ?MODULE,
+                     [{"localhost", 7778, <<"pingagent@a:michal">>}]).
 
 stop() -> agent:stop(agent:full_local_name("pingeragent")).
 
@@ -46,7 +46,7 @@ handle_info(ping, {SelfName, DestAgent} = State) ->
     io:format("ping ~p ~n", [DestAgent]),
     {Ip, Port, Name} = DestAgent,
     Addr = list_to_binary(lists:flatten(io_lib:format("http://~s:~b",
-                                       [Ip, Port]))),
+                                                      [Ip, Port]))),
     io:format("addr ~p~n", [Addr]),
     Dest = #'agent-identifier'{name = Name,
                                addresses = [Addr]},

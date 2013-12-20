@@ -35,6 +35,8 @@
 -export([current_platform/0, get_argument/1,
          split_agent_identifier/1, split_exat_platform_identifier/1,
 
+         start/0, stop/0,
+
          start/2, stop/1]).
 
 %%====================================================================
@@ -60,6 +62,45 @@
 %%          {ok, Pid, State} |
 %%          {error, Reason}
 %%====================================================================
+
+start() ->
+    ok = application:ensure_started(inets, permanent),  % FIXME! Use ".rel"
+    ok = application:ensure_started(xmerl, permanent),
+    ok = application:ensure_started(ranch, permanent),
+    ok = application:ensure_started(cowlib, permanent),
+    ok = application:ensure_started(cowboy, permanent),
+    ok = application:ensure_started(erlware_commons),
+    ok = application:ensure_started(seresye),
+    ok = application:ensure_started(exat, permanent),
+    case init:get_argument(start) of
+        {ok, [[List]]} ->
+            ApplicationList = string:tokens(List, ","),
+            case ApplicationList of
+                [] -> ok;
+                _ ->
+                    logger:log('AMS',
+                               {"Staring Applications: ~s",
+                                [lists:flatten(["{" ++ X ++ "}"
+                                                || X <- ApplicationList])]}),
+                    lists:foreach(fun (X) ->
+                                          M = list_to_atom(X),
+                                          io:format("~p~n", [M]),
+                                          M:start()
+                                  end,
+                                  ApplicationList)
+            end;
+        _ -> ok
+    end.
+
+%%====================================================================
+%% Func: stop/1
+%% Returns: any
+%%====================================================================
+
+stop() ->
+    ok = application:stop(exat).
+
+
 start(_Type, _StartArgs) ->
     exat_sup:start_link().
 
@@ -67,7 +108,8 @@ start(_Type, _StartArgs) ->
 %% Func: stop/1
 %% Returns: any
 %%====================================================================
-stop(_State) -> ok.
+stop(_State) -> 
+    ok.
 
 %%====================================================================
 %% Func: current_platform/0

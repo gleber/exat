@@ -20,10 +20,10 @@
 start() -> start("").
 
 start(N) when is_integer(N) -> start(integer_to_list(N));
-start(N) -> 
-	application:start(gproc),
-	application:start(proc_mobility),
-    mobile_agent:new(agent:full_local_name("pingagent"++N), ?MODULE, []).
+start(N) ->
+    application:start(gproc),
+    application:start(proc_mobility),
+    mobile_agent:start_link(agent:full_local_name("pingagent"++N), ?MODULE, []).
 
 stop() -> mobile_agent:stop(pingagent).
 
@@ -47,7 +47,7 @@ handle_acl(#aclmessage{} = Msg, State) ->
 %% ====================================================================
 
 init_state({AgentName, Callback, State}) ->
-    Status = mobile_agent:new_with_state(AgentName, Callback, [{saved_state, State}]),
+    Status = mobile_agent:start_link_with_state(AgentName, Callback, [{saved_state, State}]),
     io:format("started with state ~p and got ~p", [State, Status]).
 
 send_me(Destination) ->
@@ -80,10 +80,10 @@ ams_register_acl() ->
     Addr = <<"http://localhost:7778">>,
     Dest = #'agent-identifier'{name = <<"ams">>, addresses=[Addr]},
     Content = #action{
-            '0' = Dest,
-            '1' = #'register'{
-                name=#'agent-identifier'{name = <<"pingagent2">>, 
-                                         addresses=[<<"http://127.0.0.1:7778">>]}}},
+                 '0' = Dest,
+                 '1' = #'register'{
+                          name=#'agent-identifier'{name = <<"pingagent2">>,
+                                                   addresses=[<<"http://127.0.0.1:7778">>]}}},
     PingMsg = #aclmessage{sender = pingagent,
                           receiver = ams,
                           content = Content,
@@ -91,4 +91,3 @@ ams_register_acl() ->
                           protocol = <<"fipa-request">>
                          },
     io:format("acl request ~p~n", [acl:request(PingMsg)]).
-

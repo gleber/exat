@@ -49,7 +49,7 @@ then
     # fi
     PLATFORM_NAME=$1
     shift
-    erl -pa ebin/ -sname $PLATFORM_NAME -boot start_sasl -s exat_app $*
+    erl -pa ebin/ -sname $PLATFORM_NAME -boot start_sasl -s exat $*
 else
     help
 fi

@@ -1,5 +1,3 @@
-
-
 all: deps fast
 
 fast: rebar
@@ -21,4 +19,8 @@ clearbak:
 rebar:
 	wget -q http://cloud.github.com/downloads/basho/rebar/rebar
 	chmod u+x rebar
-	
+
+test:
+	./rebar skip_deps=true eunit
+
+eunit: test

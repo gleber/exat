@@ -6,8 +6,7 @@ Francesca Gandemi.
 
 Version 1.5.0 has the following big changes in comparison to original
 eXAT:
-- internal http server has been replaced with Misultin (which in turn
-  will be replaced with Cowboy or Mochiweb, since it got discontinued )
+- internal http server has been replaced with Cowboy
 - Eresye has been replaced with Seresye
 - agent.erl has been replaced with much simpler implementation
   closely following OTP standards
@@ -34,11 +33,11 @@ eXAT Release 1.5.0
 
    b) $ cd examples/simple
       $ make
-      
+
    b) From one shell issue
 
    $ ./run_first.sh
-   
+
    c) From another shell run:
 
    $ ./run_second.sh

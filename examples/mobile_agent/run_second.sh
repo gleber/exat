@@ -1,7 +1,7 @@
 #!/bin/sh
 cd ../..
 erl -pa examples/mobile_agent -pa ebin/ -pa lib/*/ebin/ -pa ../../ebin/ -boot start_sasl \
-    -s exat_app \
+    -s exat \
     -http_port 7779 \
     -config examples/mobile_agent/mobility \
     -m_tcp_port 1806 \

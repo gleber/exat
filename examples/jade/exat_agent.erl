@@ -1,4 +1,4 @@
--module(exat_agent).
+-module(exat_agent). 
 
 -export([start/0]).
 
@@ -15,12 +15,12 @@
 -record(state, {name}).
 
 start() ->
-    agent:new(the_exat_agent, the_exat_agent, [{behaviour, exat_agent}]).
+    agent:start_link(the_exat_agent, the_exat_agent, [{behaviour, exat_agent}]).
 
 handle_acl(#aclmessage{speechact = 'REQUEST'} = Message, #state{self = Self} = State) ->
     io:format("[Agent:~w] Request received from agent ~p\n",
               [Self, Message#aclmessage.sender]),
-    
+
     {noreply, State}.
 
 init(the_exat_agent, Params) ->

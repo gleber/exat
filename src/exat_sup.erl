@@ -72,27 +72,41 @@ start_link() ->
 %%====================================================================
 
 init([]) ->
+    io:format("~n"),
+    io:format("              __      __   ___    _______~n"),
+    io:format("              \\ \\    / /  / _ \\  |__   __|~n"),
+    io:format("        _____  \\ \\  / /  / / \\ \\    | |~n"),
+    io:format("       / __  \\  \\ \\/ /   | |__| |   | |~n"),
+    io:format("       | ____/  / /\\ \\   |  __  |   | |~n"),
+    io:format("       | \\___  / /  \\ \\  | |  | |   | |~n"),
+    io:format("       \\____/ /_/    \\_\\ |_|  |_|   |_|~n"),
+    io:format("***********************************************************~n"),
+    io:format("* The erlang eXperimental Agent Tool -- Release 1.3.0-EYE *~n"),
+    io:format("***********************************************************~n~n"),
+    io:format("eXAT, an erlang eXperimental Agent Tool~n"),
+    io:format("Copyright (C)~n"),
+    io:format("   2003-2007 Corrado Santoro (csanto@diit.unict.it)~n"),
+    io:format("   2005-2007 Francesca Gangemi (francesca@erlang-consulting.com)~n"),
+    io:format("   2010-2013 Gleb Peregud (gleber.p@gmail.com)~n"),
+
     Port = case init:get_argument(http_port) of
-        {ok, [[ThePort]]} -> list_to_integer(ThePort);
-        _ -> (?DEFAULT_PORT)
-    end,
-    {ok, _Pid} = seresye:start(agent_registry),
-    AgentRegistryTid = ets:new(agent_registry, [bag, public]),
-    MTP = {exat_platform, {exat_server, start_link, [Port]},
-           permanent, brutal_kill, supervisor, [exat_server]},
-    MTP_SENDER = {mtp_sender_service,
-                  {gen_server, start_link,
-                   [{local, mtp_sender}, mtp, [], []]},
-                  permanent, brutal_kill, worker, [ontology_service]},
-    AMS = {exat_ams, {ams, start_link, [AgentRegistryTid]}, permanent,
-           brutal_kill, worker, [ams]},
-    ONTO = {ontology_service,
-            {gen_server, start_link,
-             [{local, ontology_service}, ontology_service, [], []]},
-            permanent, brutal_kill, worker, [ontology_service]},
-    ExatChildSpec = [MTP, 
-                     MTP_SENDER, 
-                     ONTO, 
-                     AMS
+               {ok, [[ThePort]]} -> list_to_integer(ThePort);
+               _ -> (?DEFAULT_PORT)
+           end,
+    MTP =
+        {exat_mtp_server,
+         {exat_mtp_server, start_link, [Port]},
+         permanent, 10000, worker, [exat_mtp_server]},
+    AMS =
+        {exat_ams, {ams, start_link, []}, 
+         permanent, 10000, worker, [ams]},
+    ONTO =
+        {ontology_service,
+         {gen_server, start_link, [{local, ontology_service}, ontology_service, [], []]},
+         permanent, 10000, worker, [ontology_service]},
+    ExatChildSpec = [
+                     ONTO,
+                     AMS,
+                     MTP
                     ],
     {ok, {{one_for_all, 5, 20}, ExatChildSpec}}.

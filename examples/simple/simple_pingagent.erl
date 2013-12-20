@@ -13,7 +13,7 @@
 
 %%API
 
-start() -> agent:new(pingagent, ?MODULE, []).
+start() -> agent:start_link(pingagent, ?MODULE, []).
 
 stop() -> agent:stop(pingagent).
 
@@ -29,7 +29,7 @@ handle_acl(#aclmessage{speechact = 'QUERY-REF',
     spawn(fun () -> acl:reply(Msg, 'INFORM', <<"alive">>) end),
     {noreply, State};
 handle_acl(#aclmessage{} = Msg, State) ->
-	io:format("unknown ~p~n", [Msg]),
+    io:format("unknown ~p~n", [Msg]),
     {noreply, State}.
 
 %% gen_server callbacks

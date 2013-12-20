@@ -30,7 +30,7 @@
 -include("agent.hrl").
 
 -export([get_acl_semantics/1, get_mind/1, get_property/2, join/1,
-         kill/1, new/2, new/3, set_property/3, set_rational/3,
+         kill/1, start_link/2, start_link/3, set_property/3, set_rational/3,
          stop/1, cast/2, call/2
         ]).
 
@@ -51,13 +51,13 @@ behaviour_info(_Other) ->
     undefined.
 
 
-new(AgentName, Callback) ->
-    new(AgentName, Callback, []).
+start_link(AgentName, Callback) ->
+    start_link(AgentName, Callback, []).
 
-new(AgentName, Callback, Parameters) ->
-    gen_server:start({local, AgentName},
-                     agent, [AgentName, Callback, Parameters],
-                     []).
+start_link(AgentName, Callback, Parameters) ->
+    gen_server:start_link({local, AgentName},
+                          agent, [AgentName, Callback, Parameters],
+                          []).
 
 call(Ref, Call) ->
     gen_server:call(Ref, Call).
@@ -97,23 +97,30 @@ kill(Agent) -> stop(Agent).
 init(Args) ->
     [AgentName, Callback, Params0 | _] = Args,
     {NoRegister, Params} = proplists_extract(no_register, Params0, false),
-    case NoRegister of
-        false ->
-            ams:register_agent(AgentName);
-        _ -> ok
-    end,
+    Registered = 
+        case NoRegister of
+            false ->
+                ams:register_agent(AgentName),
+                true;
+            _ -> 
+                false
+        end,
     {ok, IntState} = Callback:init(AgentName, Params),
     {ok, #agent_state{name = AgentName, callback = Callback,
-                int_state = IntState}}.
+                      int_state = IntState, registered = Registered}}.
 
 %%
 %% Terminate
 %%
 terminate(Reason,
           #agent_state{callback = Callback, name = AgentName,
-                 int_state = IntState} =
+                       int_state = IntState, registered = Registered} =
               _State) ->
-    ams:de_register_agent(AgentName), 
+    case Registered of
+        true ->
+            ams:de_register_agent(AgentName);
+        _ -> ok
+    end,
     ok = Callback:terminate(Reason, IntState),
     ok.
 
@@ -144,6 +151,7 @@ handle_call([acl, AclStr], _From,
                                                        IntState),
             {reply, ok, State#agent_state{int_state = IntState2}}
     end;
+
 %%
 %% Receives an ACL message in Erlang format
 %%
@@ -154,14 +162,26 @@ handle_call([acl_erl_native, Acl], _From,
                                                IntState),
     {reply, ok, State#agent_state{int_state = IntState2}};
 handle_call(Call, From,
-            #agent_state{int_state = IntState, callback = Callback} =
-                State) ->
-    %%io:format("~p ~p~n", [From, Call]),
-    R = Callback:handle_call(Call, From, IntState),
-    IntState2 = element(size(R), R),
-    setelement(size(R), R,
-               State#agent_state{int_state = IntState2}).
-
+            #agent_state{int_state = IntState, 
+                         callback = Callback} = State) ->
+    case Callback:handle_call(Call, From, IntState) of 
+        {reply, Reply, IntState2} ->
+            {reply, Reply, State#agent_state{int_state=IntState2}};
+        {reply, Reply, IntState2, hibernate} ->
+            {reply, Reply, State#agent_state{int_state=IntState2}, hibernate};
+        {reply, Reply, IntState2, Timeout} ->
+            {reply, Reply, State#agent_state{int_state=IntState2}, Timeout};
+        {noreply, IntState2} ->
+            {noreply, State#agent_state{int_state=IntState2}};
+        {noreply, IntState2, hibernate} ->
+            {noreply, State#agent_state{int_state=IntState2}, hibernate};
+        {noreply, IntState2, Timeout} ->
+            {noreply, State#agent_state{int_state=IntState2}, Timeout};
+        {stop, Reason, IntState2} ->
+            {stop, Reason, State#agent_state{int_state=IntState2}};
+        {stop, Reason, Reply, IntState2} ->
+            {stop, Reason, Reply, State#agent_state{int_state=IntState2}}
+    end.
 %%
 %% Stops the agent process
 %%
@@ -169,20 +189,26 @@ handle_call(Call, From,
 handle_cast('$agent_stop', State) ->
     {stop, normal, State};
 handle_cast(Cast,
-            #agent_state{int_state = IntState, callback = Callback} =
-                State) ->
+            #agent_state{int_state = IntState, 
+                         callback = Callback} = State) ->
     R = Callback:handle_cast(Cast, IntState),
     IntState2 = element(size(R), R),
     setelement(size(R), R,
                State#agent_state{int_state = IntState2}).
 
-handle_info(Msg,
-            #agent_state{int_state = IntState, callback = Callback} =
-                State) ->
-    R = Callback:handle_info(Msg, IntState),
-    IntState2 = element(size(R), R),
-    setelement(size(R), R,
-               State#agent_state{int_state = IntState2}).
+handle_info(Info,
+            #agent_state{int_state = IntState, 
+                         callback = Callback} = State) ->
+    case Callback:handle_info(Info, IntState) of
+        {noreply, NewIntState} ->
+            {noreply, State#agent_state{int_state=NewIntState}};
+        {noreply, NewIntState, hibernate} ->
+            {noreply, State#agent_state{int_state=NewIntState}, hibernate};
+        {noreply, NewIntState, Timeout} ->
+            {noreply, State#agent_state{int_state=NewIntState}, Timeout};
+        {stop, Reason, NewIntState} ->
+            {stop, Reason, State#agent_state{int_state=NewIntState}}
+    end.
 
 code_change(OldVsn,
             #agent_state{int_state = IntState, callback = Callback} =

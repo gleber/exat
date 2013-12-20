@@ -14,8 +14,8 @@
 %%API
 
 start() ->
-    agent:new(pingeragent, ?MODULE,
-              [{"localhost", 7778, <<"pingagent">>}]).
+    agent:start_link(pingeragent, ?MODULE,
+                     [{"localhost", 7778, <<"pingagent">>}]).
 
 stop() -> agent:stop(pingeragent).
 
@@ -41,11 +41,11 @@ handle_call(Call, _From, State) ->
 handle_cast(_Call, State) -> {noreply, State}.
 
 handle_info(ping, {SelfName, DestAgent} = State) ->
-	io:format("ping~n"),
+    io:format("ping~n"),
     {Ip, Port, Name} = DestAgent,
     Addr = list_to_binary(lists:flatten(io_lib:format("http://~s:~b",
-                                       [Ip, Port]))),
-	io:format("addr ~p~n", [Addr]),
+                                                      [Ip, Port]))),
+    io:format("addr ~p~n", [Addr]),
     Dest = #'agent-identifier'{name = Name,
                                addresses = [Addr]},
     PingMsg = #aclmessage{sender = SelfName,

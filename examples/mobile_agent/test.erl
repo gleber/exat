@@ -1,4 +1,4 @@
--module(test).
+.erl-module(test).
 
 
 -export([test_run/1, test_migration/1, test_run_paralel/1, test_migration_p/1]). % API

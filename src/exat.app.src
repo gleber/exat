@@ -20,7 +20,7 @@
 {application, exat,
   [{ mod, { exat, [] } },
    { vsn, "1.5.1" },
-   { applications, [kernel, stdlib, xmerl, seresye, misultin] },
+   { applications, [kernel, stdlib, xmerl, seresye, cowboy] },
    { description, "erlang eXperimental Agent Tool" },
    { registered, [] }
   ]}.

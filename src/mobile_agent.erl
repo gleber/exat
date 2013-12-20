@@ -23,7 +23,7 @@
 -export([handle_call/3]).
 
 %%
-%% API 
+%% API
 %%
 
 new(AgentName, Callback, Parameters) ->
@@ -34,17 +34,17 @@ new(AgentName, Callback, Parameters) ->
                      []).
 
 new_with_state(AgentName, Callback, State) ->
-	gen_server:start({local, AgentName},
+    gen_server:start({local, AgentName},
                      mobile_agent, [AgentName, Callback, State],
                      []).
 
 %% ====================================================================
-%% Gen Server 
+%% Gen Server
 %% ====================================================================
 
-handle_call({mobility, send_me, Destination}, _From, 
+handle_call({mobility, send_me, Destination}, _From,
             #agent_state{name = AgentName, callback = Callback, int_state = IntState} = State) ->
-%% 	code:get_object_code(State#agent_state.callback)
+    %%  code:get_object_code(State#agent_state.callback)
     Params = ams:get_migration_parameters(State#agent_state.name, Destination),
     case interprete_params(Params, Destination) of
         {ok, PMSAddr} ->
@@ -53,17 +53,17 @@ handle_call({mobility, send_me, Destination}, _From,
                 ok ->
                     MyselfPid = self(),
                     spawn(fun() ->
-                                erlang:monitor(process, MyselfPid),
-                                receive
-                                    {'DOWN', _, _, MyselfPid, _} -> %%agent died and deregistered
-                                        NewPid = proc_mobility:whereis_name(AgentName),
-                                        ams:register_agent(AgentName, [Destination], NewPid)
-                                after 3000 ->
-                                        io:format("sth went wrong, didn't get DOWN message!")
-                                end
-                        end),
+                                  erlang:monitor(process, MyselfPid),
+                                  receive
+                                      {'DOWN', _, _, MyselfPid, _} -> %%agent died and deregistered
+                                          NewPid = proc_mobility:whereis_name(AgentName),
+                                          ams:register_agent(AgentName, [Destination], NewPid)
+                                  after 3000 ->
+                                          io:format("sth went wrong, didn't get DOWN message!")
+                                  end
+                          end),
                     {stop, normal, ok, State};
-                Result -> 
+                Result ->
                     {reply, Result, State}
             end;
         _ ->
@@ -82,10 +82,9 @@ handle_call(Request, From, State) ->
 %% Local Functions
 %%
 interprete_params(<<"erl", Node/binary>>, _) -> {ok, binary_to_atom(Node, utf8)};
-interprete_params(<<"tcp", Port/binary>>, Dest) -> 
+interprete_params(<<"tcp", Port/binary>>, Dest) ->
     {match, [_, HostP]} = re:run(Dest, "http://([a-zA-Z0-9\.]*):*[-9]*"),
     %%io:format("dest ~p host ~p~n", [Dest, HostP]),
     Host = binary:part(Dest, HostP),
     {ok,{tcp, binary_to_list(Host), list_to_integer(binary_to_list(Port))}};
 interprete_params(_, _) -> error.
-

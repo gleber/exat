@@ -34,40 +34,16 @@
 %%====================================================================
 %% External exports
 %%====================================================================
--export([addresses/0, http/1,
+-export([addresses/0,
          http_mtp_encode_and_send/3]).
-
--export([code_change/3, handle_call/3, init/1,
-         terminate/2]).
 
 %%====================================================================
 %% Macros
 %%====================================================================
--define(BAD_RESPONSE, Req:respond(400)).
-
--define(OK_RESPONSE, Req:ok("")).
 
 %%====================================================================
 %% External functions
 %%====================================================================
-%%====================================================================
-%% Func: http/1
-%%====================================================================
-http(Port) ->
-    logger:start('HTTP-MTP'),
-    logger:log('HTTP-MTP',
-               {"MTP Starting at port ~w", [Port]}),
-    {ok, Hostname} = inet:gethostname(),
-    {ok, HostEnt} = inet:gethostbyname(Hostname),
-    MTPAddress = lists:flatten(["http://",
-                                HostEnt#hostent.h_name, ":",
-                                integer_to_list(Port), "/acc"]),
-    seresye:assert(agent_registry,
-                   {mtp_address, MTPAddress}),
-    logger:log('HTTP-MTP', {"Handing things over to misultin", []}),
-    misultin:start_link([{port, Port},
-                         {acceptors_poolsize, 1},
-                         {loop, fun handle_http/1}]).
 
 %%====================================================================
 %% Func: addresses/0
@@ -76,101 +52,6 @@ addresses() ->
     MTPAddress = seresye:query_kb(agent_registry,
                                   {mtp_address, '_'}),
     [ X || {_, X} <- MTPAddress].
-
-%%====================================================================
-%% Func: http_mtp_post/3
-%%====================================================================
-handle_http(Req) ->
-    http_mtp_post(Req:get(method),
-                  Req:resource([lowercase, urldecode]), Req:get(headers),
-                  Req).
-
-http_mtp_post('POST', _Url, _Headers, Req) ->
-    %%io:format ("URL = ~s~n", [Url]),
-    %%display_params (Headers),
-    Content = Req:parse_post(),
-    [{part, _, XmlContent}] = [V1
-                               || V1 <- Content, http_mtp_post_1(V1)],
-    [{part, _, SLContent}] = [V2
-                              || V2 <- Content, http_mtp_post_2(V2)],
-    http_mtp_decode(Req, XmlContent, SLContent).
-
-http_mtp_post_1({part, H, _D}) ->
-    "application/xml" ==
-        misultin_utility:header_get_value('Content-Type', H).
-
-http_mtp_post_2({part, H, _D}) ->
-    "application/text" ==
-        misultin_utility:header_get_value('Content-Type', H).
-
-%%
-%%
-
-%%====================================================================
-%% Func: http_mtp_decode/3
-%%====================================================================
-http_mtp_decode(Req, XmlContent, SLContent) ->
-    {To, From, ACLRepr} =
-        envelope:parse_xml_envelope(binary_to_list(XmlContent)),
-    decode_and_forward_acl(Req, To, From, SLContent,
-                           ACLRepr).
-
-%%
-%%
-decode_and_forward_acl(Req, _, _, Message,
-                       <<"fipa.acl.rep.string.std">>) ->
-    ACLMessage = acl:parse_message(binary_to_list(Message)),
-    %%io:format ("Message = ~w~n", [ACLMessage]),
-    %%decode content
-    ParsedMessage = case ontology_service:get_codec(ACLMessage#aclmessage.ontology) of
-                        {ok, Codec} ->
-                            {ok, SL} = sl:decode(binary_to_list(ACLMessage#aclmessage.content)),
-                            %%io:format ("Content = ~p~n", [SL]),
-                            ACLMessage#aclmessage{content = Codec:decode(SL)};
-                        _ -> ACLMessage
-                    end,
-    %%determine receiver list
-    Receivers = case is_list(ParsedMessage#aclmessage.receiver) of
-                    true -> ParsedMessage#aclmessage.receiver;
-                    false -> [ParsedMessage#aclmessage.receiver]
-                end,
-    CurrentPlatform = exat:current_platform(),
-    %%io:format ("Receivers = ~w~n", [Receivers]),
-    LocalReceivers = [V1 || V1 <- Receivers,
-                            is_local(V1, CurrentPlatform)],
-    MessagesToSend = [ ParsedMessage#aclmessage{receiver = X} || X <- LocalReceivers],
-    LocalAms = agent:full_local_name("ams"),
-    %%io:format ("Message = ~p~n", [MessagesToSend]),
-    lists:foreach(fun (X) ->
-                AgentName = (X#aclmessage.receiver)#'agent-identifier'.name,
-                Receiver = case binary_to_atom(AgentName, utf8) of
-                    LocalAms ->
-                        ams;
-                    ReceiverB -> ReceiverB
-                end,
-                %%{ID, _} = exat:split_agent_identifier(Receiver),
-                %%io:format ("Recv = ~w~n", [Receiver]),
-                case whereis(Receiver) of 
-                    undefined ->
-                        case ams:get_registered_agents(Receiver) of
-                            [] ->
-                                io:format("There isn't agent ~p~n", [Receiver]);
-                            [#'agent-identifier'{name = Receiver, addresses = Addrs} = Receiver2 | _ ] ->
-                                X2 = X#aclmessage{receiver = Receiver2#'agent-identifier'{name=AgentName}},
-                                %%spawn(fun() -> acl:sendacl(X2) end)
-                                gen_server:call({via, proc_mobility, Receiver}, [acl_erl_native, X2])
-                        end;
-                    _ ->
-                        gen_server:call(Receiver, [acl_erl_native, X])
-                end
-        end, MessagesToSend),
-    ?OK_RESPONSE;
-decode_and_forward_acl(Req, _, _, _, _) ->
-    ?BAD_RESPONSE.
-
-is_local(X, CurrentPlatform) ->
-    {_ID, HAP} = exat:split_agent_identifier(X#'agent-identifier'.name),
-    HAP == CurrentPlatform.
 
 %%====================================================================
 %% Func: http_mtp_encode_and_send/1
@@ -221,7 +102,7 @@ http_mtp_encode_and_send(To, From, Message) ->
     %%               Headers,
     %%               "multipart/mixed ; boundary=\"251D738450A171593A1583EB\"",
     %%               HTTPBody}, [], [{sync, true}]),
-    case gen_server:call(mtp_sender, {http_post, Request}) of        
+    case httpc:request(post, Request, [], [{sync, true}]) of
         {ok, RequestID} ->
             Result = RequestID,
             {StatusLine, _ReceivedHeaders, _ReceivedBody} = Result,
@@ -229,26 +110,3 @@ http_mtp_encode_and_send(To, From, Message) ->
         _ ->
             ok
     end.
-
-%%====================================================================
-%% Func: init/1
-%%====================================================================
-init(_) -> {ok, []}.
-
-%%====================================================================
-%% Func: handle_call/3
-%%====================================================================
-handle_call({http_post, Request}, _From, State) ->
-    HTTPID = httpc:request(post, Request, [],
-                           [{sync, true}]),
-    {reply, HTTPID, State}.
-
-%%====================================================================
-%% Func: terminate/2
-%%====================================================================
-terminate(_, _) -> ok.
-
-%%====================================================================
-%% Func: code_change/3
-%%====================================================================
-code_change(_OldVsn, State, _Extra) -> {ok, State}.
