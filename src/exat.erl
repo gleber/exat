@@ -67,6 +67,7 @@ start() ->
     ok = application:ensure_started(inets, permanent),  % FIXME! Use ".rel"
     ok = application:ensure_started(xmerl, permanent),
     ok = application:ensure_started(ranch, permanent),
+    ok = application:ensure_started(crypto, permanent),
     ok = application:ensure_started(cowlib, permanent),
     ok = application:ensure_started(cowboy, permanent),
     ok = application:ensure_started(erlware_commons),
